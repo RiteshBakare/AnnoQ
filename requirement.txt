@@ -1,0 +1,21 @@
+# Google ADK - Agent orchestration
+google-adk>=2.0
+
+# LLM Integration - Groq
+litellm
+
+# Prompt Templates
+jinja2
+
+# Data Validation and Configuration
+pydantic>=2
+python-dotenv
+
+# Jira REST API
+requests
+
+# Image Processing
+Pillow
+
+# Testing
+pytest
