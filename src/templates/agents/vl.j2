@@ -1,0 +1,6 @@
+{% extends "specialist_base.j2" %}
+{% block lens %}VALIDATION (VL). For input elements: required/optional, formats, min/max length, masks (card number, postcode,
+phone), when validation triggers (blur/submit), exact error messages, server-side error mapping, cross-field rules.
+Category: VALIDATION. Owner usually product (rules) or tech (server errors).
+Do NOT cover screen/component states, business thresholds, or data sources; other specialists own those.
+If the flow has no input elements, return {"candidates": []}.{% endblock %}

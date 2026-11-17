@@ -477,6 +477,48 @@ Findings for later tasks:
 - `gemini-2.5-flash` returns 404 for new API users; `gemini-3.8-flash`, `gemini-3.5-flash`, `gemini-flash-latest` returned 503 (high demand) on the spike day. `gemini-3-flash-preview` worked. `groq/llama-3.3-70b-versatile` is no longer listed on Groq; `groq/openai/gpt-oss-120b` works.
 - On 503 the google-genai client retried internally for ~180 s before failing → breaks NFR-1. T6.3 must set an explicit HTTP timeout/retry policy for Gemini.
 
+#### 9.3 M1 implementation notes (2026-11-17)
+
+- **Dev models** (cheap, in `.env`): `VISION_MODEL=gemini-3.1-flash-lite`, `TEXT_MODEL=groq/openai/gpt-oss-20b`. Use the larger models (`gemini-3-flash-preview`, `groq/openai/gpt-oss-120b`) for the final demo. Gemini often wraps JSON in code fences, so `extract_json` strips them.
+- **Image parts:** `image_parts()` puts a short text label `Screen S<k> (file "<name>"):` before each image. It is still one Gemini call; the label maps ids to images without doubt.
+- **Marker hash** uses the original file bytes, so changing `MAX_IMAGE_EDGE` does not change the marker.
+- **Jira Cloud returns 404, not 401, for a wrong token.** The 404 message also tells the user to check credentials.
+- **`after_model_callback` runs on stub replies** too. Calls are tracked per agent (`RunContext.start_call/end_call`), so a refused or failed call is logged once only (`ok=False` for model errors; refused calls are not logged as calls).
+- **Config precedence:** CLI > process env > `.env`. `MAX_LLM_CALLS` is clamped to 1..9. `PANEL_CONCURRENCY` is limited to 1..5. Jira credentials are optional in `--dry-run`.
+
+#### 9.4 M2 implementation notes (2026-11-17)
+
+The prompt files in `src/templates/` are now the source of truth for prompts; §8 keeps the original drafts.
+
+**Changes from the §8 drafts (all inside the 8-call budget):**
+- **analyst.j2:**
+  - Lists the allowed element `type` values, so schema validation passes.
+  - Groups repeated list rows into one `list` element.
+  - Asks for a complete inventory: no section may be dropped.
+  - Sets `needs_clarification=true` for data/interactive elements and CTAs. Flash-lite flagged nothing before this rule.
+  - Asks for a pairwise screen comparison to find recurring components.
+- **panel_input.j2:** lists the recurring components as explicit "ASK ONCE" targets. FLOW questions went from 3 to 6 on the shopping flow.
+- **specialist_base.j2:** all 8 keys are required. BR left out `owner`/`priority` before this.
+- **br.j2:** must not cover button enabled/disabled conditions (that is ST's lens).
+- **curator.j2:**
+  - Merge only questions that ask the same decision.
+  - Bundle sibling fields into one question.
+  - Keep the best questions up to the target; the list is never empty when candidates exist.
+  - `targets.total` is the expected total, computed in code.
+- **Instructions are passed as a callable** (instruction provider), so ADK does not try to inject `{state}` into the JSON braces in the prompts.
+
+**Model plumbing (`agents.py`, `models.py`):**
+- **Gemini:** `response_mime_type=application/json`.
+- **Groq:** `json_object` mode is **off**. With gpt-oss it failed with `json_validate_failed` (empty generation), so JSON is enforced by the prompt and parsed by `extract_json`.
+- **Groq text agents:** `thinking_level=LOW` (maps to `reasoning_effort=low`) and `max_output_tokens=4096`. Without these, gpt-oss used its whole 2048-token output on reasoning and returned no JSON.
+- **Groq free tier is 8,000 tokens/min for every model on this account** (20b, 120b, qwen). One run's 6 Groq calls need about 14–18k tokens. `RateLimitedLiteLlm` waits as long as Groq's `try again in Xs` says (at most 90 s per call) and retries inside the same logical call, so the budget still counts it once. This part of T6.3 was pulled forward. Measured panel+curator time on the free tier: **63–88 s**, so a full run is ~2 min. **This breaks NFR-1 (≤ 90 s) unless the Groq account moves to a paid/dev tier.**
+
+**Findings for M3/M4:**
+- Specialists sometimes emit `scope=SCREEN` with several screens, and FLOW questions whose screens go beyond the RC's `appears_on` (e.g. address asked "on S1"). T3.1 must coerce scope from the screen count and clamp RC questions to `appears_on`.
+- The curator once returned `{"questions":[]}` for 38 candidates. `validate_curated` must treat an empty list as invalid when candidates exist (route RETRY/FALLBACK).
+- gpt-oss-20b curation is uneven: it sometimes keeps cross-lens duplicates (ACTION vs DATA_SOURCE on the same button) and sometimes over-merges. The code dedupe (T3.2) and auditor are the safety net; compare with the demo model in T6.2.
+- Gemini 3.1 flash-lite returned 503 once in 6 runs (high demand). The T6.3 Gemini retry/timeout policy is still open.
+
 ---
 
 ## 10. Budget & model plumbing

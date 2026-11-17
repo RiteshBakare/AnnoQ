@@ -1,0 +1,13 @@
+Flow folder name: {{ flow_hint }}
+{% if ticket_context %}
+Jira ticket context (may be incomplete): {{ ticket_context }}
+{% endif %}
+Screens, in flow order ({{ screens | length }} total; return exactly these ids):
+{% for s in screens %}
+- {{ s.id }}: file "{{ s.file }}"{% if s.hint %} (name hint: {{ s.hint }}){% endif %}
+
+{% endfor %}
+{% if repair %}
+
+Your previous answer was invalid ({{ repair }}). Fix it and return valid JSON only.
+{% endif %}

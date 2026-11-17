@@ -22,26 +22,29 @@ Refs: `architecture.md` (A), `spec.md` (S).
 
 ## M1 — Foundations (no LLM)
 
-- [ ] **T1.1 `config.py`** — load `.env`, `Settings` (pydantic), CLI-over-env precedence, clamp `MAX_LLM_CALLS ≤ 9`, parse `OWNER_LABELS`, limits. **Dep:** T0.1
-- [ ] **T1.2 `models.py`** — `build_model()`, `validate_slots()`; per-agent overrides. **Dep:** T1.1, T0.5–T0.6
+- [x] **T1.1 `config.py`** — load `.env`, `Settings` (pydantic), CLI-over-env precedence, clamp `MAX_LLM_CALLS ≤ 9`, parse `OWNER_LABELS`, limits. **Dep:** T0.1
+- [x] **T1.2 `models.py`** — `build_model()`, `validate_slots()`; per-agent overrides. **Dep:** T1.1, T0.5–T0.6
   *Done when:* misconfigured slot exits 1 with clear message.
-- [ ] **T1.3 `schemas.py`** — pydantic models from S§6 (FlowInventory, RecurringComponent, Candidate with scope/screens, AuditPatch with rescope, RunReport). **Dep:** T0.1
-- [ ] **T1.4 `image_utils.py`** — folder scan (natural sort, hidden/non-image ignored, `MAX_SCREENS`), single-file mode, per-image validation/resize, per-image SHA + flow hash, `types.Part` list in order, screen ids S1…Sn with filename-derived hints. **Dep:** T1.1
-- [ ] **T1.5 `prompts.py`** — Jinja2 env (`StrictUndefined`) with two roots (`agents/`, `inputs/`), `render_agent()`, `render_input()`, `jira` filter, `extract_json()`. **Dep:** T1.3
-- [ ] **T1.6 `budget.py` + `run_context.py`** — `LLMBudget` (locked), `RunContext` (settings, image parts, budget, call log), before/after/error callbacks. **Dep:** T0.6
-- [ ] **T1.7 `jira_client.py`** — `get_issue_context`, `has_marker`, `post_comment`, error mapping (S§12.3). **Dep:** T1.1
+- [x] **T1.3 `schemas.py`** — pydantic models from S§6 (FlowInventory, RecurringComponent, Candidate with scope/screens, AuditPatch with rescope, RunReport). **Dep:** T0.1
+- [x] **T1.4 `image_utils.py`** — folder scan (natural sort, hidden/non-image ignored, `MAX_SCREENS`), single-file mode, per-image validation/resize, per-image SHA + flow hash, `types.Part` list in order, screen ids S1…Sn with filename-derived hints. **Dep:** T1.1
+- [x] **T1.5 `prompts.py`** — Jinja2 env (`StrictUndefined`) with two roots (`agents/`, `inputs/`), `render_agent()`, `render_input()`, `jira` filter, `extract_json()`. **Dep:** T1.3
+- [x] **T1.6 `budget.py` + `run_context.py`** — `LLMBudget` (locked), `RunContext` (settings, image parts, budget, call log), before/after/error callbacks. **Dep:** T0.6
+- [x] **T1.7 `jira_client.py`** — `get_issue_context`, `has_marker`, `post_comment`, error mapping (S§12.3). **Dep:** T1.1
   *Done when:* verified against a sandbox ticket.
-- [ ] **T1.8 Unit tests for M1** — folder scan cases, escape filter, `extract_json`, budget (10th call refused, concurrent), slot validation, config precedence.
+  *Result:* GET context, `has_marker` and 404/invalid-key errors verified on the sandbox ticket. POST is covered by offline tests only; the first real post is T6.4.
+- [x] **T1.8 Unit tests for M1** — folder scan cases, escape filter, `extract_json`, budget (10th call refused, concurrent), slot validation, config precedence.
 
 ---
 
 ## M2 — Prompts & agents
 
-- [ ] **T2.1 Agent templates** — `agents/analyst.j2`, `specialist_base.j2` + `ds/ia/vl/st/br.j2`, `curator.j2`, `auditor.j2` (S§8). **Dep:** T1.5
-- [ ] **T2.2 Input templates** — `inputs/analyst_input.j2`, `panel_input.j2`, `curator_input.j2`, `auditor_input.j2`. Snapshot-render tests with `StrictUndefined`. **Dep:** T1.5
-- [ ] **T2.3 `agents.py`** — build 8 `Agent` nodes (names per S§7), callbacks (budget/image/log/error), temperatures, `mode="single_turn"`; nested `specialist_panel` pieces. **Dep:** T1.2, T1.6, T2.1
-- [ ] **T2.4 Analyst on 3 sample flows** — run `screen_analyst` alone; check: all screens returned, verbatim labels, transitions plausible, **recurring components detected** (address, header, order summary). Tune prompt. **Dep:** T2.3
-- [ ] **T2.5 Panel + curator on saved inventories** — inspect per-agent output: lens boundaries respected, no cross-screen duplicates, FLOW scope used correctly. Tune prompts. **Dep:** T2.3
+- [x] **T2.1 Agent templates** — `agents/analyst.j2`, `specialist_base.j2` + `ds/ia/vl/st/br.j2`, `curator.j2`, `auditor.j2` (S§8). **Dep:** T1.5
+- [x] **T2.2 Input templates** — `inputs/analyst_input.j2`, `panel_input.j2`, `curator_input.j2`, `auditor_input.j2`. Snapshot-render tests with `StrictUndefined`. **Dep:** T1.5
+- [x] **T2.3 `agents.py`** — build 8 `Agent` nodes (names per S§7), callbacks (budget/image/log/error), temperatures, `mode="single_turn"`; nested `specialist_panel` pieces. **Dep:** T1.2, T1.6, T2.1
+- [x] **T2.4 Analyst on 3 sample flows** — run `screen_analyst` alone; check: all screens returned, verbatim labels, transitions plausible, **recurring components detected** (address, header, order summary). Tune prompt. **Dep:** T2.3
+  *Result:* synthetic wireframe flows (`python -m tests.fixtures.make_sample_flows`; shopping 4, login_otp 3, onboarding 4) run via `python -m tests.live.dev_stages analyst flows/<name>`. All screens returned in order, transitions correct, RCs found (address + order summary on shopping; skip + dots on onboarding). Real designs come with the golden set (T6.1).
+- [x] **T2.5 Panel + curator on saved inventories** — inspect per-agent output: lens boundaries respected, no cross-screen duplicates, FLOW scope used correctly. Tune prompts. **Dep:** T2.3
+  *Result:* `python -m tests.live.dev_stages panel flows/<name>` runs on all 3 flows. Recurring components are asked once (FLOW). Remaining quality gaps with the cheap dev models are listed in S§9.4 and go to M3 (code fixes) and T6.2 (tuning).
 
 ---
 

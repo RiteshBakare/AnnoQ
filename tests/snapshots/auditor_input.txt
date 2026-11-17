@@ -1,0 +1,7 @@
+CURATED QUESTIONS (JSON, numbered by "n"):
+[{"category":"DATA_SOURCE","scope":"FLOW","screens":["S1","S2"],"element_refs":["RC1"],"question":"Which endpoint returns the order summary?","answer_hint":"endpoint, method, fields","owner":"tech","priority":"P1","source_agents":["DS"],"n":1}]
+
+COMPACT INVENTORY (JSON):
+{"flow_name":"Checkout","screens":[{"id":"S1","name":"Cart","complexity":"medium"},{"id":"S2","name":"Payment","complexity":"low"}],"recurring_components":[{"id":"RC1","name":"Order summary","appears_on":["S1","S2"],"element_refs":["S1.E2","S2.E1"]}],"transitions":[{"from":"S1","to":"S2","trigger":"S1.E3"}],"flagged":[{"id":"S1.E1","label":"Cart items"},{"id":"S2.E1","label":"Order summary"},{"id":"S2.E2","label":"Pay now"}]}
+
+uncovered (flagged elements/components with no question): ["S2.E2"]

@@ -1,0 +1,7 @@
+FLOW INVENTORY (JSON):
+{"flow_name":"Checkout","flow_summary":"Cart to order.","screens":[{"id":"S1","file":"01_cart.png","name":"Cart","purpose":"Review items","complexity":"medium","elements":[{"id":"S1.E1","type":"list","label":"Cart items","data_bearing":true,"interactive":true,"needs_clarification":true,"notes":"3 rows"},{"id":"S1.E2","type":"card","label":"Order summary","data_bearing":true}]},{"id":"S2","file":"02_pay.png","name":"Payment","purpose":"Pay","complexity":"low","elements":[{"id":"S2.E1","type":"card","label":"Order summary","data_bearing":true,"needs_clarification":true},{"id":"S2.E2","type":"button","label":"Pay now","interactive":true,"needs_clarification":true}]}],"transitions":[{"from_screen":"S1","to_screen":"S2","trigger":"S1.E3"}],"recurring_components":[{"id":"RC1","name":"Order summary","appears_on":["S1","S2"],"element_refs":["S1.E2","S2.E1"]}]}
+
+limits: {"max_candidates": 6, "screens": 2}
+ASK ONCE: these components repeat across screens. Any question about them is ONE scope="FLOW" question with all of
+their screens, element_refs=["RC#"]:
+- RC1 "Order summary" on S1, S2

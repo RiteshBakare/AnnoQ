@@ -1,0 +1,6 @@
+Flow folder name: shopping
+Jira ticket context (may be incomplete): Summary: Checkout v2
+Screens, in flow order (3 total; return exactly these ids):
+- S1: file "01_cart.png" (name hint: Cart)
+- S2: file "02_place-order.png" (name hint: Place order)
+- S3: file "003.png"

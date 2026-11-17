@@ -1,0 +1,14 @@
+COMPACT INVENTORY (JSON):
+{{ inventory | tojson_compact }}
+
+CANDIDATES ({{ candidates | length }}, tagged by source_agents):
+{{ candidates | tojson_compact }}
+
+targets: {{ targets | tojson_compact }}
+{% if n_screens == 1 %}
+Single-screen flow: use scope="SCREEN" only; flow-level target is 0.
+{% endif %}
+{% if repair %}
+
+Your previous answer was invalid ({{ repair }}). Fix it and return valid JSON only.
+{% endif %}

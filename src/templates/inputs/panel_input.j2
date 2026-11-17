@@ -1,0 +1,18 @@
+FLOW INVENTORY (JSON):
+{{ inventory_json }}
+
+limits: {"max_candidates": {{ max_candidates }}, "screens": {{ n_screens }}}
+{% if recurring %}
+ASK ONCE: these components repeat across screens. Any question about them is ONE scope="FLOW" question with all of
+their screens, element_refs=["RC#"]:
+{% for rc in recurring %}
+- {{ rc.id }} "{{ rc.name }}" on {{ rc.appears_on | join(", ") }}
+
+{% endfor %}
+{% endif %}
+{% if ticket_context %}
+TICKET CONTEXT: {{ ticket_context }}
+{% endif %}
+{% if n_screens == 1 %}
+Single-screen flow: use scope="SCREEN" only.
+{% endif %}
