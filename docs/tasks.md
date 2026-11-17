@@ -71,12 +71,14 @@ Refs: `architecture.md` (A), `spec.md` (S).
 
 ## M5 — CLI, rendering, Jira
 
-- [ ] **T5.1 `jira_comment.j2` + render helper** — Common section + per-screen sections, owner index, blocker marker, screen names; snapshot tests for 1- and 4-screen flows. **Dep:** T1.5, T3.4
-  *Started in M4:* `finalize` needed it, so the template and `postprocess.comment_context` exist. Still to do: the snapshot tests and a review of the layout.
-- [ ] **T5.2 `cli.py`** — args, env fallbacks, folder/single-file detection, build `RunContext`, fetch Jira context, run workflow via `Runner`, read `state["result"]`, exit codes (S§13). **Dep:** T4.2
-- [ ] **T5.3 Artifacts** — `flow_inventory.json`, `candidates.json`, `curated.json`, `audit.json`, `comment.txt`, `run_report.json`.
-  *Started in M4:* the `publish` and `fail` nodes already write these files. Still to do: verify them through the CLI.
-- [ ] **T5.4 End-to-end `--dry-run`** — one 4-screen shopping flow; verify `llm_calls == 8` (2 Gemini + 6 Groq), models per call, comment structure.
+- [x] **T5.1 `jira_comment.j2` + render helper** — Common section + per-screen sections, owner index, blocker marker, screen names; snapshot tests for 1- and 4-screen flows. **Dep:** T1.5, T3.4
+  *Result:* snapshots for a 4-screen and a 1-screen flow (`tests/test_comment.py`, `tests/snapshots/jira_comment_*.txt`). Layout fix: `[CATEGORY]` is now escaped, because `[...]` is link syntax in Jira wiki (S§9.7).
+- [x] **T5.2 `cli.py`** — args, env fallbacks, folder/single-file detection, build `RunContext`, fetch Jira context, run workflow via `Runner`, read `state["result"]`, exit codes (S§13). **Dep:** T4.2
+  *Result:* `tests/test_cli.py` (12 offline tests, stub agents + fake Jira): exit 0 (dry-run, posted, marker skip, `--force`), 1 (path, key, slot, missing secrets), 2 (pipeline failure, crash), 3 (POST failure, comment kept).
+- [x] **T5.3 Artifacts** — `flow_inventory.json`, `candidates.json`, `curated.json`, `audit.json`, `comment.txt`, `run_report.json`.
+  *Result:* written by `publish` / `fail`; checked through the CLI in `tests/test_cli.py` (all 6 files and their content).
+- [x] **T5.4 End-to-end `--dry-run`** — one 4-screen shopping flow; verify `llm_calls == 8` (2 Gemini + 6 Groq), models per call, comment structure.
+  *Result:* `python run.py --file-path flows/shopping --dry-run` (cheap dev models, sandbox ticket context fetched by GET): exit 0, `llm_calls` 8 (2 Gemini + 6 Groq), 26 questions (8 common), 160 s on the Groq free tier. The auditor hit a Gemini 503, so its patch was skipped with a warning, as designed (S§9.7).
 
 ---
 

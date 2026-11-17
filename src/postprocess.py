@@ -91,6 +91,15 @@ def _load(raw: Any) -> Any:
     return data
 
 
+_ID_IN_TEXT = re.compile(r"\s*\(\s*(?:RC\d+|S\d+(?:\.E\d+)?)(?:\s*[,/]\s*(?:RC\d+|S\d+(?:\.E\d+)?))*\s*\)")
+
+
+def clean_question(value: Any) -> str:
+    """Collapse whitespace, drop internal ids the PMO can't read ("(RC1)", "(S2.E5, S3.E1)"), end with '?'."""
+    text = " ".join(_ID_IN_TEXT.sub("", str(value or "")).split())
+    return text if not text or text.endswith("?") else text.rstrip(".") + "?"
+
+
 def tokens(text: str) -> set[str]:
     return {t for t in re.findall(r"[a-z0-9]+", text.lower()) if t not in STOPWORDS and len(t) > 1}
 
@@ -177,9 +186,7 @@ def validate_candidate(item: Any, inv: FlowInventory | FlowIndex, source: str | 
     category = str(item.get("category") or "").strip().upper()
     if category not in CATEGORIES:
         raise InvalidOutput(f"unknown category {category!r}")
-    question = " ".join(str(item.get("question") or "").split())
-    if question and not question.endswith("?"):
-        question = question.rstrip(".") + "?"
+    question = clean_question(item.get("question"))
     if not 8 <= len(question) <= 300:
         raise InvalidOutput(f"question length {len(question)} outside 8-300")
     hint = " ".join(str(item.get("answer_hint") or "").split())
@@ -361,8 +368,7 @@ def apply_patch(questions: list[Question], raw: Any, inv: FlowInventory) -> tupl
                 warnings.append(f"auditor remove Q{n}: reason {op.get('reason')!r} not allowed")
     for op in data.get("reword") or []:
         if (n := target(op, "reword")) is not None:
-            text = " ".join(str(op.get("question") or "").split())
-            text = text if not text or text.endswith("?") else text.rstrip(".") + "?"
+            text = clean_question(op.get("question"))
             if 8 <= len(text) <= 300:
                 by_n[n].question = text
             else:

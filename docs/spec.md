@@ -603,6 +603,48 @@ The prompt files in `src/templates/` are now the source of truth for prompts; §
 - The auditor removed 2 duplicates and reworded 1 question.
 - **153 s in total.** Time per call: specialists 2–49 s (waiting on the Groq TPM limit), curator 44 s, auditor 49 s (flash-lite with 4 images). NFR-1 still depends on the Groq tier (§9.4).
 
+#### 9.7 M5 implementation notes (2026-11-17)
+
+**CLI (`src/cli.py`), in run order.**
+1. Load settings (CLI > process env > `.env`).
+2. Check the model slots and required inputs.
+3. Check the issue key format (`PROJ-123`, upper-cased).
+4. Load the flow images.
+5. Fetch the ticket context with a read-only GET whenever Jira credentials are set, **also in `--dry-run`** (FR-5). A failure is only a warning.
+6. Run the graph.
+7. Print a summary: calls (Gemini/Groq), questions, artifacts path, warnings.
+8. Print the comment in `--dry-run`.
+
+**Exit codes.**
+- 0: dry-run, posted, or skipped because the marker is already there.
+- 1: `ConfigError` / `InputError`, including a bad path, bad key, bad slot or missing secret.
+- 2: `result.ok=False`, or any unexpected exception (last-resort guard).
+- 3: `result.jira_error` (marker check or POST failed). `comment.txt` is already saved.
+
+**Console and logging.**
+- stdout/stderr are switched to UTF-8; the Windows cp1252 console crashed on `→ · —`.
+- Logging: third-party libraries at WARNING; `src.*` at `LOG_LEVEL` (`-v` = DEBUG). Each LLM call and each Groq 429 wait is logged at INFO.
+- LiteLLM debug banners are turned off.
+
+**Comment template (T5.1).**
+- `\[CATEGORY\]` is escaped: `[...]` is link syntax in Jira wiki markup. The §12.1 draft used it raw.
+- The `_Please include: …_` line is left out when `answer_hint` is empty.
+- When there are no questions, the comment says "No open questions were found for this flow."
+- `Hi …` lists only the owners that have questions; all owners when there are none.
+- Snapshots: `tests/snapshots/jira_comment_4_screens.txt` and `jira_comment_1_screen.txt`.
+
+**Question text clean-up.**
+- `clean_question()` removes internal ids such as `(RC1)` or `(S2.E2, S2.E3)` from question text; the live run showed the curator writing them.
+- It runs in `validate_candidate` and in the auditor's reword.
+- No prompt was changed.
+
+**Live end-to-end (T5.4).**
+- Command: `python run.py --file-path flows/shopping --dry-run`, cheap dev models, ticket context from the sandbox ticket.
+- Result: exit 0; 8 calls (2 Gemini + 6 Groq); 26 questions, 8 common (stepper, address and order summary each asked once).
+- **The auditor got a Gemini 503.** The error stub → "patch skipped" warning → the curated list was posted as designed.
+- **160 s in total**: analyst 12 s; specialists 2–59 s and curator 48 s (Groq TPM waits); auditor 34 s until it failed.
+- Still open for T6.3: Gemini 503 retry/timeout policy, and the Groq tier vs NFR-1.
+
 ---
 
 ## 10. Budget & model plumbing

@@ -304,3 +304,14 @@ def test_flow_index():
     idx = FlowIndex(INV)
     assert idx.screens_for(["RC1", "S1.E1", "FLOW"]) == ["S1", "S2", "S3", "S4"]
     assert idx.single_rc(["S2.E1", "RC1"]) == "RC1" and idx.single_rc(["S2.E1", "S2.E2"]) is None
+
+
+@pytest.mark.parametrize("raw, clean", [
+    ("What API feeds the Stepper component (RC1) on Shipping?", "What API feeds the Stepper component on Shipping?"),
+    ("Which rules apply to Full name (S2.E2, S2.E3) and Pincode", "Which rules apply to Full name and Pincode?"),
+    ("Is the  cart (S1) shown.", "Is the cart shown?"),
+    ("Keep (optional) words like RC car?", "Keep (optional) words like RC car?"),
+])
+def test_clean_question_drops_internal_ids(raw, clean):
+    from src.postprocess import clean_question
+    assert clean_question(raw) == clean

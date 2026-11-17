@@ -15,7 +15,7 @@ _No open questions were found for this flow._
 h3. Common to multiple screens — answer once
 {% for q in common %}
 
-*Q{{ q.n }}. [{{ q.category }}] {{ q.element_label | jira }}* — applies to: {{ q.screen_names | join(', ') | jira }}{% if q.priority == "P1" %} {color:#de350b}(blocker){color}{% endif %}
+*Q{{ q.n }}. \[{{ q.category }}\] {{ q.element_label | jira }}* — applies to: {{ q.screen_names | join(', ') | jira }}{% if q.priority == "P1" %} {color:#de350b}(blocker){color}{% endif %}
 
 {{ q.question | jira }}
 {% if q.answer_hint %}
@@ -29,7 +29,7 @@ Owner: {{ q.owner_label }}
 h3. {{ s.id }} — {{ s.name | jira }}
 {% for q in s.questions %}
 
-*Q{{ q.n }}. [{{ q.category }}] {{ q.element_label | jira }}*{% if q.priority == "P1" %} {color:#de350b}(blocker){color}{% endif %}
+*Q{{ q.n }}. \[{{ q.category }}\] {{ q.element_label | jira }}*{% if q.priority == "P1" %} {color:#de350b}(blocker){color}{% endif %}
 
 {{ q.question | jira }}
 {% if q.answer_hint %}

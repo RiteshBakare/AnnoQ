@@ -80,6 +80,7 @@ def _rate_limited_litellm_class() -> type:
     import litellm
     from google.adk.models.lite_llm import LiteLlm  # heavy import (litellm); only when a Groq model is built
 
+    litellm.suppress_debug_info = True  # no "Give Feedback / Get Help" banners on handled 429s
     transient = (litellm.InternalServerError, litellm.ServiceUnavailableError, litellm.APIConnectionError,
                  litellm.Timeout)
 
