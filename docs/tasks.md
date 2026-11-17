@@ -50,11 +50,12 @@ Refs: `architecture.md` (A), `spec.md` (S).
 
 ## M3 — Post-processing (pure Python)
 
-- [ ] **T3.1 Validators** — inventory & candidate validators (S§6 rules), scope/screens coercion, single-screen forcing to SCREEN.
-- [ ] **T3.2 `dedupe_across_screens`** — RC-based and Jaccard-based merge → FLOW with union of screens (S§11.2).
-- [ ] **T3.3 `coverage`, `fallback_curate`, `apply_patch`** — incl. `rescope`, allowed reasons, unknown `n` handling.
-- [ ] **T3.4 Caps, ordering, numbering, size guard** — per-screen/flow/total caps, drop order, FLOW-first numbering, 30k-char loop.
-- [ ] **T3.5 Unit tests for M3** — include: same address question from 3 screens → 1 FLOW question; patch edge cases; caps drop P2 first; zero candidates; 1-screen flow.
+- [x] **T3.1 Validators** — inventory & candidate validators (S§6 rules), scope/screens coercion, single-screen forcing to SCREEN.
+- [x] **T3.2 `dedupe_across_screens`** — RC-based and Jaccard-based merge → FLOW with union of screens (S§11.2).
+- [x] **T3.3 `coverage`, `fallback_curate`, `apply_patch`** — incl. `rescope`, allowed reasons, unknown `n` handling.
+- [x] **T3.4 Caps, ordering, numbering, size guard** — per-screen/flow/total caps, drop order, FLOW-first numbering, 30k-char loop.
+- [x] **T3.5 Unit tests for M3** — include: same address question from 3 screens → 1 FLOW question; patch edge cases; caps drop P2 first; zero candidates; 1-screen flow.
+  *Result:* `src/postprocess.py` + `tests/test_postprocess.py` (30 tests). Offline replay of the saved M2 live outputs: address question clamped to S2–S4, multi-screen SCREEN coerced to FLOW, uncovered elements surfaced for the auditor (S§9.5).
 
 ---
 

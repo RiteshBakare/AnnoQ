@@ -519,6 +519,52 @@ The prompt files in `src/templates/` are now the source of truth for prompts; §
 - gpt-oss-20b curation is uneven: it sometimes keeps cross-lens duplicates (ACTION vs DATA_SOURCE on the same button) and sometimes over-merges. The code dedupe (T3.2) and auditor are the safety net; compare with the demo model in T6.2.
 - Gemini 3.1 flash-lite returned 503 once in 6 runs (high demand). The T6.3 Gemini retry/timeout policy is still open.
 
+#### 9.5 M3 implementation notes (2026-11-17)
+
+`src/postprocess.py` is pure: no I/O and no LLM. `FlowIndex` gives fast lookups: refs → screens, RC membership, flagged elements.
+
+**Inventory (`validate_inventory`).**
+- *Fatal (→ RETRY with a short repair hint):* not JSON or an error stub; schema failure; screen ids not exactly `S1..Sn` in order; element id not `S<k>.E<m>` on its own screen; duplicate element id.
+- *Repaired with a warning:*
+  - an unknown element `type` becomes `other`; an unknown `complexity` becomes `medium`. This saves a retry call.
+  - `file` is set from the real file name, and an empty name from the filename hint.
+  - an RC with fewer than 2 known screens or a bad id is dropped; unknown RC element refs are removed.
+  - transitions to unknown screens are dropped.
+
+**Candidates (`validate_candidate`).**
+- *Rejected (dropped with a warning):* unknown category; question shorter than 8 or longer than 300 characters; no known `element_refs`; owner not in the enum.
+- *Coerced:*
+  - **`screens` are derived from the refs**: an element counts as its screen, an RC as its `appears_on`. This clamps RC questions to where the RC really appears (M2 finding).
+  - `scope` follows the screen count (1 → SCREEN, 2 or more → FLOW). A single-screen flow is always SCREEN.
+  - A missing owner gets the category default. A missing or unexpected priority becomes `P2`.
+  - `?` is appended; `answer_hint` is trimmed to 200 characters; comma-separated ref strings are split.
+- `merge_candidates`: an agent is *usable* if it returned a parseable candidates list. An empty list is a valid answer: VL on a flow without inputs.
+- `parse_curated`: an empty `questions` list is **invalid** when there were candidates (→ RETRY/FALLBACK; M2 finding). Questions with no sources get `["CUR"]`.
+
+**Dedupe (`dedupe_across_screens`).**
+- Union-find over pairs, so merges are transitive.
+- Merge rules, as in §11.2: same category with the same single RC, or same category on different screens with Jaccard ≥ 0.6 (stopwords removed).
+- The question text is kept from the first P1 (else the first) question in the group.
+
+**Coverage.**
+- An RC is covered if its id **or any of its member elements** is referenced.
+- A flagged element is covered if it is referenced directly, its RC is covered, or its screen id is referenced by a non-CONTENT question.
+
+**`fallback_curate`.** Merge exact duplicates (same category, same screens, same token set; union sources, higher priority) → cross-screen dedupe → P1 first → caps.
+
+**`apply_patch`.**
+- Each op is validated on its own: one bad `add` does not discard the whole patch.
+- An op on an unknown or already removed `n` is ignored with a warning.
+- Only the first 3 `add` items are used.
+- A patch that is not JSON or is an error stub is skipped, and the curated list is kept.
+
+**Caps, order and size.**
+- Caps run in this order: `MAX_FLOW_Q` → `MAX_Q_PER_SCREEN` (per screen) → `MAX_TOTAL_Q`.
+- Drop order (`drop_rank`): P2 before P1 → auditor-only before others → single-source before multi-source → later before earlier.
+- `fit_to_size` takes a `render` callable; the comment template comes in T5.1.
+
+**Replay of the saved M2 live outputs** (offline, no model calls; curator path): 27 / 17 / 9 final questions for shopping / login_otp / onboarding. Shopping has 6 FLOW questions, with the address clamped to S2–S4. On onboarding, the multi-screen SCREEN question was coerced to FLOW. Uncovered for the auditor: login `S1.E6, S2.E4`; onboarding's three "Next" buttons. The fallback alone would give 30 / 25 / 18.
+
 ---
 
 ## 10. Budget & model plumbing
