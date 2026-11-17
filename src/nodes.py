@@ -57,6 +57,7 @@ def compact_inventory(inv: FlowInventory) -> dict:
                                   "element_refs": rc.element_refs} for rc in inv.recurring_components],
         "transitions": [{"from": t.from_screen, "to": t.to_screen, "trigger": t.trigger} for t in inv.transitions],
         "flagged": [{"id": e.id, "label": e.label} for s in inv.screens for e in s.elements if e.needs_clarification],
+        "ambiguities": inv.ambiguities,  # incl. cross-screen conflicts the curator must keep
     }
 
 

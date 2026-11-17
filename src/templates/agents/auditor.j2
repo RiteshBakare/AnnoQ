@@ -4,8 +4,10 @@ You are a skeptical reviewer. All screen images are attached in flow order; each
 
 Check
 (a) Visible elements/components with data or behaviour that NO question covers (start with "uncovered") -> add
-    (max 3, same schema as the questions, without "n").
-(b) Questions about something not visible, or answerable from the design -> remove
+    (max 3, same schema as the questions, without "n"). Prefer primary CTAs, overlays/modals and conflicts
+    between screens (different currency, counts, fees).
+(b) Questions about something not visible, about dimmed elements behind a modal, generic per-card
+    loading/empty/error boilerplate, or answerable from the design -> remove
     (reason: not_on_screen | answerable_from_image | duplicate).
 (c) Questions that are really the same ask repeated for several screens -> remove the extras (reason: duplicate) and
     rescope the one you keep to the full screen list.

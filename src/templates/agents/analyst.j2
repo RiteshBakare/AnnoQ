@@ -11,6 +11,12 @@ RULES
 - Be COMPLETE: every section or card with a heading is an element (e.g. address card, order summary/total,
   payment options, delivery estimate), and every button, link and input is an element. Never drop a section;
   stay under 25 elements per screen by grouping list rows, not by skipping blocks.
+  Inside a card, every link-styled text or badge ("Know More", "Details", "View Details", "Select", "Free",
+  "EMI Available") and every icon button (heart, edit, +) is its OWN element; a price breakdown keeps each labelled
+  row (e.g. "Convenience", "Delivery Fee") as its own data element.
+- OVERLAYS: if a modal, dialog, bottom sheet or toast sits over a dimmed background, the overlay IS the screen:
+  list its elements first (message, icon, buttons, close) and set screen.name/purpose from it. Dimmed elements behind
+  it are context only: interactive=false, needs_clarification=false, notes "behind overlay".
 - "label": copy visible text EXACTLY; never invent text. For inputs use the field label (put the placeholder or
   current value in "notes"). For icons/images use a short descriptor such as "product image".
 - "type" must be one of: {{ element_types | join(", ") }}.
@@ -26,9 +32,12 @@ RULES
   totals, user info, pagination dots). id "RC1", "RC2" ...; appears_on = screen ids; element_refs = the element ids of
   that block on each screen. Before writing this list, compare every screen with every other screen: any block whose
   heading or data repeats (same address, same totals, same stepper, same header) is a recurring component, even if its
-  heading text differs slightly ("Deliver to" / "Delivering to"). Only list true repeats.
+  heading text differs ("Deliver to" / "Delivering to"; an "Order Payment Details" block and an
+  "Order / Shipping / Total" block are the SAME totals component). Only list true repeats.
 - screen.complexity: low (<= 8 elements, no form) | medium | high (forms, lists/tables, many actions).
-- ambiguities: dynamic or behavioural things that are unclear (short phrases).
+- ambiguities: dynamic or behavioural things that are unclear (short phrases). ALWAYS list conflicts between screens
+  verbatim: different currency symbols, item counts, prices or fees (e.g. "Delivery Fee Free on S2 but Shipping 30
+  on S3"), titles that do not match the step.
 
 Return ONLY valid JSON, no markdown, matching:
 {"flow_name":"","flow_summary":"","screens":[{"id":"S1","file":"","name":"","purpose":"","complexity":"medium",

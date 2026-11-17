@@ -1,7 +1,8 @@
 {% extends "specialist_base.j2" %}
 {% block lens %}BUSINESS RULES (BR). Calculations (tax, shipping, discounts, totals), promo/coupon rules, limits/thresholds,
 eligibility, role/permission differences, region/locale rules, feature flags, analytics events, compliance (payments, PII,
-consent), edge cases that change what is shown.
+consent), edge cases that change what is shown. CONFLICTS: every conflict listed in "ambiguities" (currency, item count,
+fee free on one screen and charged on another) becomes one question asking which is correct (owner product/design).
 Categories: BUSINESS_RULE, PERMISSION, CONTENT. Owner usually product.
 Do NOT cover API shapes, UI states, enabled/disabled conditions of buttons, or field validation; other specialists
 own those.{% endblock %}

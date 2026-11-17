@@ -1,5 +1,5 @@
 {
-  "_note": "PROXY reference questions written by the developer from the synthetic flows (T6.1). Replace or extend with the questions the annotation team normally asks. A topic matches a generated question when the question text contains at least one word/phrase from EVERY group (case-insensitive). ask_once=true: the topic must be covered by a FLOW-scope question.",
+  "_note": "Reference questions per golden flow (T6.1). shopping/login_otp/onboarding/single_screen/repeated_component are PROXY topics for the synthetic flows; purchase is a REAL design (flows/purchase), topics written from its screens, each with the reference question an annotator would ask. Replace or extend with the questions the annotation team normally asks. A topic matches a generated question when the question text contains at least one word/phrase from EVERY group (case-insensitive). ask_once=true: the topic must be covered by a FLOW-scope question.",
   "shopping": [
     {"topic": "Cart items: data source", "match": [["cart item", "items", "cart list"], ["api", "endpoint", "source", "service", "fetch"]]},
     {"topic": "Quantity stepper / Remove behaviour", "match": [["quantity", "remove", "stepper"]]},
@@ -53,5 +53,26 @@
     {"topic": "Add payment method", "match": [["add payment", "add a payment", "new payment"]]},
     {"topic": "Saved card / UPI data source", "match": [["card", "upi", "payment method"], ["source", "api", "endpoint", "stored", "mask", "token"]]},
     {"topic": "Log out", "match": [["log out", "logout"]]}
+  ],
+  "purchase": [
+    {"topic": "Delivery address source", "question": "Where does the delivery address (address + contact) come from: saved-address API, default address, last used?", "match": [["address"], ["api", "endpoint", "source", "saved", "fetch", "default"]]},
+    {"topic": "Edit address / add address (+)", "question": "What do the edit icon and the + tile do: open an address form, an address list, a new screen? Can the user have several addresses?", "match": [["address"], ["edit", "add", "plus", "+", "new"]]},
+    {"topic": "Product card data source", "question": "Which API returns the item name, variations, rating, price, MRP and discount for the Shopping List cards?", "match": [["product", "item", "shopping list", "card", "casual wear", "jacket"], ["api", "endpoint", "source", "fetch", "service"]]},
+    {"topic": "Variation chips behaviour", "question": "Are the Variations chips (Black/Red, Green/Grey) selectable on Checkout, and which one is the chosen variant?", "match": [["variation", "black", "red", "green", "grey", "colour", "color"]]},
+    {"topic": "Discount label 'upto X% off'", "question": "How is 'upto 33% off' calculated and why 'upto' when the item has a single price?", "match": [["off", "discount", "mrp", "strike", "original price"]]},
+    {"topic": "Size / Qty selectors", "question": "Where do the Size and Qty options come from, what is the max quantity, and what happens when stock is lower?", "match": [["size", "qty", "quantity"]]},
+    {"topic": "Delivery-by date", "question": "How is 'Delivery by 10 May' calculated (pincode, warehouse, courier SLA) and where does it come from?", "match": [["delivery by", "delivery date", "estimated delivery", "10 may", "eta"]]},
+    {"topic": "Apply coupon flow", "question": "What does 'Select' under Apply Coupons open, where do coupons come from and how is a coupon validated/applied?", "match": [["coupon", "promo"]]},
+    {"topic": "Convenience fee / Know More", "question": "What is the Convenience fee, how is it computed and what does 'Know More' show? Why is 'Apply Coupon' shown in its value column?", "match": [["convenience", "know more"]]},
+    {"topic": "Delivery fee free vs shipping 30", "question": "When is Delivery Fee 'Free', and why does the payment screen charge Shipping 30 for the same order?", "match": [["delivery fee", "shipping fee", "shipping charge", "shipping cost", "shipping amount", "free", "shipping"]]},
+    {"topic": "Order totals calculation (asked once)", "question": "Which service calculates Order, Shipping and Total, and are these values recalculated on every screen?", "match": [["total", "order amount", "subtotal", "order summary", "payment details", "breakdown"]], "ask_once": true},
+    {"topic": "EMI available / Details", "question": "Who decides 'EMI Available' (bank, amount threshold) and what does 'Details' show?", "match": [["emi"]]},
+    {"topic": "Proceed to Payment / View Details", "question": "What happens on Proceed to Payment (create order? validate stock?) and what does 'View Details' in the footer do?", "match": [["proceed to payment", "view details"]]},
+    {"topic": "Wishlist heart on Shopping Bag", "question": "What does the heart icon on Shopping Bag do: move the item to wishlist or open the wishlist?", "match": [["heart", "wishlist", "favourite", "favorite"]]},
+    {"topic": "Saved payment methods source / masking", "question": "Where do the saved payment methods (Visa, PayPal, Mastercard, Apple Pay) come from, how are numbers masked, and which is pre-selected?", "match": [["payment method", "card", "visa", "paypal", "apple pay", "mastercard", "saved payment"], ["source", "api", "endpoint", "mask", "stored", "token", "default", "selected", "pre-selected", "fetch"]]},
+    {"topic": "Continue / payment processing and failure", "question": "What does Continue do (payment gateway, 3-D Secure, timeout) and what does the user see when the payment fails?", "match": [["continue", "pay", "payment"], ["fail", "error", "declin", "gateway", "process", "timeout"]]},
+    {"topic": "Bottom tab bar (asked once)", "question": "Is the bottom tab bar (Home, Wishlist, Cart, Search, Setting) shown during checkout, and does the cart button show a badge?", "match": [["tab", "bottom nav", "navigation bar", "nav bar", "home", "setting"]], "ask_once": true},
+    {"topic": "Success modal dismissal / next screen", "question": "How is 'Payment done successfully' dismissed and where does the user go next (order details, home)? Is an order id shown?", "match": [["success", "payment done", "confirmation"], ["dismiss", "close", "navigate", "redirect", "next", "after", "auto", "order id", "order number"]]},
+    {"topic": "Currency / data inconsistency across screens", "question": "Checkout shows two items in $, Shopping Bag one item in rupees: which currency and which cart contents are correct?", "match": [["currency", "$", "usd", "inr", "rupee", "₹", "inconsisten", "mismatch", "differ"]]}
   ]
 }

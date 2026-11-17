@@ -31,7 +31,8 @@ ID_LEAK = re.compile(r"\b(RC\d+|S\d+\.E\d+)\b")
 def latest_run(flow_dir: str) -> Path | None:
     sha = load_flow(flow_dir).sha
     runs = [p.parent for p in Path("outputs").glob("*/run_report.json")
-            if json.loads(p.read_text(encoding="utf-8")).get("flow_sha") == sha]
+            if json.loads(p.read_text(encoding="utf-8")).get("flow_sha") == sha
+            and (p.parent / "flow_inventory.json").exists()]  # skip runs that failed before the inventory
     return max(runs, key=lambda p: p.stat().st_mtime) if runs else None
 
 

@@ -687,8 +687,42 @@ The prompt files in `src/templates/` are now the source of truth for prompts; §
 - *Met (5 of 9):* the call budget, 2 Gemini + 6 Groq calls, models from `.env`, the caps, one comment with plain labels and contiguous numbers.
 - *Open:*
   - annotator review: no duplicates and ≥ 80 % useful / ≥ 90 % recall;
-  - full coverage on repeated_component (3 flagged elements left after the audit);
+  - full coverage on repeated_component (3 flagged elements left after the audit) — **fixed 2026-11-18**, see §9.9;
   - ≤ 90 s: about 1–2.5 min per run on the Groq free tier; needs a paid tier.
+
+#### 9.9 Real-design tuning (2026-11-18)
+
+**Golden flow `purchase`** (real design, 4 screens: Checkout, Shopping Bag, Payment, Success modal) with 19 reference
+topics + reference questions in `tests/golden/references.json`; developer rating sheet `tests/golden/purchase_rating.csv`.
+
+**Models.** High-end Gemini (`gemini-3-flash-preview`, `gemini-3.5/3.6/3.7/3.8-flash`) returned 503/timeouts on the
+free key and `gemini-3.1-pro-preview` returned 429 (quota). Runs used `gemini-3.1-flash-lite` + `groq/openai/gpt-oss-120b`.
+
+**Coverage fix.** `FlowIndex.element_rc` also maps children of an RC block (`section` = the block's element id, e.g. the
+Edit button inside a repeated profile card) to that RC, so a question on the RC covers them. This was the cause of the
+3 "uncovered" elements on repeated_component (they were asked, via RC1).
+
+**Prompt tuning (no new calls).**
+- analyst: overlays/modals are the screen, dimmed elements behind them are context only; price breakdowns with different
+  headings are one RC; links/badges/price rows inside a card are separate elements; cross-screen conflicts (currency,
+  counts, fees) always go to `ambiguities`.
+- ST lens: no per-card "loading / empty / error" boilerplate; at most one flow-level question for it.
+- IA lens: skip standard Back / tab-bar targets; ask payment/order failure outcome.
+- BR lens: every conflict in `ambiguities` becomes a question.
+- curator: drop boilerplate, Back, dimmed-behind-modal questions; merge the same data under different headings; keep
+  conflicts and the primary-CTA action; generic states are P2. `compact_inventory` now passes `ambiguities`.
+- auditor: prefer CTAs, overlays and conflicts for adds; remove dimmed-behind-modal and boilerplate questions.
+
+| run | questions (common) | proxy recall | developer rating useful | x-screen dupes | uncovered |
+|---|---|---|---|---|---|
+| baseline | 25 (1) | 74 % | 11/25 = 44 % | 1 | 1 |
+| tuning 1 | 21 (4) | 79 % | 16/21 = 76 % | 0 | 0 |
+| tuning 2 | 27 (6) | 84 % | 19/27 = 70 % | 0 | 0 |
+
+Tuning 2 asks both ask-once topics once, and all three conflicts (currency, Free vs 30, 7,000 vs 7,030), the
+convenience fee and the success-modal next step. Its losses are 4 same-screen duplicates the curator did not merge,
+3 generic and 1 dimmed-element question. Run-to-run variance with `flash-lite` is large; the 80 % / 90 % targets need a
+stronger vision model (or annotator re-rating) to confirm.
 
 ---
 

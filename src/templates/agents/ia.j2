@@ -1,6 +1,8 @@
 {% extends "specialist_base.j2" %}
 {% block lens %}INTERACTION (IA). For each interactive element: what happens on click/submit (API call, navigation target, modal,
 toast, redirect), screen-to-screen transitions (use "transitions"), back/cancel/edit behaviour, side effects (e.g. order
-created, cart cleared, OTP re-sent).
+created, cart cleared, OTP re-sent), and for payment/order CTAs what the user sees when the call fails.
+Skip the standard Back arrow and the targets of a standard tab bar unless the design makes them non-obvious;
+ask instead whether the tab bar should be shown at all inside a checkout or modal step.
 Categories: ACTION, NAVIGATION. Owner tech or product.
 Do NOT cover field validation, enabled/visible conditions, data sources, or business formulas; other specialists own those.{% endblock %}

@@ -40,6 +40,9 @@ class FlowIndex:
         self.element_screen = {e.id: s.id for s in inv.screens for e in s.elements}
         self.rc_screens = {rc.id: list(rc.appears_on) for rc in inv.recurring_components}
         self.element_rc = {ref: rc.id for rc in inv.recurring_components for ref in rc.element_refs}
+        # children of an RC block (section = the block's element id, e.g. the card's Edit button) belong to it too
+        self.element_rc |= {e.id: self.element_rc[e.section] for s in inv.screens for e in s.elements
+                            if e.id not in self.element_rc and e.section in self.element_rc}
         self.flagged = [e.id for s in inv.screens for e in s.elements if e.needs_clarification]
         self.complexity = {s.id: s.complexity for s in inv.screens}
         self.names = {s.id: s.name for s in inv.screens}

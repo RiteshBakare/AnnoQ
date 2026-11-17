@@ -206,6 +206,18 @@ def test_coverage():
     assert coverage(qs, INV) == ["S1.E1", "S1.E3", "S3.E3", "S4.E2"]
 
 
+def test_coverage_counts_children_of_recurring_block():
+    """An Edit button inside the address card (section = card id) is covered by a question on the RC."""
+    d = json.loads(json.dumps(INV_DICT))
+    for sid, card in (("S2", "S2.E1"), ("S3", "S3.E1")):
+        screen = next(s for s in d["screens"] if s["id"] == sid)
+        screen["elements"].append({**el(f"{sid}.E9", "button", "Edit"), "section": card})
+    inv = FlowInventory.model_validate(d)
+    assert FlowIndex(inv).element_rc["S2.E9"] == "RC1"
+    assert "S2.E9" in coverage([], inv)
+    assert not {"S2.E9", "S3.E9"} & set(coverage([cand(refs=["RC1"], screens=["S2", "S3", "S4"])], inv))
+
+
 def test_fallback_curate():
     dup1 = cand("Which endpoint returns cart items?", refs=["S1.E1"], sources=["DS"], priority="P2")
     dup2 = cand("Which endpoint returns the cart items?", refs=["S1.E1"], sources=["IA"], priority="P1")

@@ -3,4 +3,8 @@
 buttons; conditional visibility; selected/expanded states; stepper/progress behaviour; persistence of state across steps
 (cart, form data when going back); timeouts and session expiry.
 Categories: STATE, VISIBILITY. Owner product or tech (design for empty/error visuals).
+NEVER ask the generic "what are the loading, empty and error states of <card>?" per component. Ask about a state
+only when it is a real product decision visible in this flow (no saved address, payment failed, coupon invalid,
+item out of stock, which payment method is pre-selected, what happens when an overlay/modal closes). At most ONE
+scope="FLOW" question may cover generic loading/error handling for the whole flow.
 Do NOT cover input-validation text, business formulas, or data sources; other specialists own those.{% endblock %}

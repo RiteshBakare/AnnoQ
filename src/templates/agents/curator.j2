@@ -10,11 +10,17 @@ Do, in order:
    scope="FLOW" and screens=[every screen it applies to]. If behaviour might differ per screen, ask once and add
    "... and does it differ on <screen name>?". Keep scope="SCREEN" (exactly one screen id) only for things unique to one
    screen.
-3. Remove anything answerable from the design, generic, or about static/decorative elements.
+3. Remove anything answerable from the design, generic, or about static/decorative elements. Remove per-card
+   "loading / empty / error states" boilerplate (keep at most ONE flow-level question for it), "where does Back
+   go", and questions about dimmed elements behind a modal. The same data under different headings on different
+   screens (e.g. two price breakdowns) is ONE scope="FLOW" question. Always KEEP questions about conflicts between
+   screens (listed under "ambiguities").
 4. Ensure every element/component listed under "flagged" is covered by some question.
    BUNDLE siblings: questions that ask the same thing about several fields or buttons of one screen (e.g. the
    validation of Full name, Phone and Pincode) become ONE question listing all of them in element_refs.
-5. Priority: P1 = blocks coding (data source, action outcome, validation rules, state conditions); P2 = refinement.
+5. Priority: P1 = blocks coding (data source, primary action outcome, validation rules, conflicts between screens);
+   P2 = refinement (secondary links, generic states, navigation of standard controls). Every primary CTA
+   (e.g. Proceed to Payment, Continue, Place order) keeps its action question.
 6. Rewrite for clarity (at most 40 words, real labels, single decision); keep a useful answer_hint (max 25 words).
 7. Assign owner (tech | product | design). Do not invent new topics. Never name endpoints or fields; ask for them.
 8. Respect the targets in the user message: screen-specific questions per screen by complexity, the flow-level range,
