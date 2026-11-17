@@ -71,8 +71,8 @@ python run.py [--file-path FOLDER_OR_IMAGE] [--jira-id KEY] [--dry-run] [--force
 
 ```ini
 # ---- Models (change here only) ----
-VISION_MODEL=gemini-2.5-flash             # example; analyst + auditor (must be Gemini)
-TEXT_MODEL=groq/llama-3.3-70b-versatile   # example; 5 specialists + curator (must be groq/…)
+VISION_MODEL=gemini-3-flash-preview       # example (verified 2026-11-17); analyst + auditor (must be Gemini)
+TEXT_MODEL=groq/openai/gpt-oss-120b       # example (verified 2026-11-17); 5 specialists + curator (must be groq/…)
 MODEL_ANALYST=
 MODEL_AUDITOR=
 MODEL_SPECIALISTS=
@@ -455,6 +455,27 @@ runner = Runner(agent=workflow, app_name="flow_questions", session_service=InMem
 | A6 | `on_model_error_callback` (or equivalent) lets a failed branch still emit output so `JoinNode` completes. | Wrap each panel agent in a function node with try/except that emits a stub. |
 | A7 | `Workflow(max_concurrency=…)` throttles parallel agents. | Use an `asyncio.Semaphore` in the budget callback. |
 | A8 | Agent output arrives to the next node as `str` or parsed `dict`. | Validators already handle both. |
+
+#### 9.2 M0 spike results (google-adk 2.14.1, Python 3.13, 2026-11-17)
+
+All of A1–A8 hold; **no fallback needed**. Spikes live in `tests/spikes/` (offline, run by `pytest`) and
+`tests/spikes/live_models.py` (live, `python -m tests.spikes.live_models`, needs keys).
+
+| # | Result | Evidence / notes |
+|---|--------|------------------|
+| A1 | ✅ | Imports work. `Runner(node=workflow, app_name=…, session_service=…)` (use `node=`, not `agent=`). |
+| A2 | ✅ | Nested `Workflow` as a node; every panel agent got the parent node's output as its user message. |
+| A3 | ✅ | `JoinNode` output = `{agent_name: output}` for all 5 branches. |
+| A4 | ✅ | Router `Event(route=…)` + dict edges + loop back to `build_analyst_input` (2 inbound edges) re-runs; counter in state works; RETRY→OK and RETRY→ABORT both pass. The retried agent call contains **only** the new message (failed reply is not in history). |
+| A5 | ✅ | `Agent(model=LiteLlm("groq/…"), mode="single_turn")` works as a node; before/after/error callbacks fire; usage tokens available in `after_model_callback` (`llm_response.usage_metadata`). JSON output valid with and without `response_format={"type":"json_object"}`. |
+| A6 | ✅ | `on_model_error_callback` returning a stub `LlmResponse` lets the branch emit output; `JoinNode` completes with 2 failed branches. Note: `after_model_callback` also runs on the stub (`usage_metadata=None`) — usage logging must tolerate `None`. |
+| A7 | ✅ | `max_concurrency=2` → peak 2 concurrent model calls; `None` → all parallel. |
+| A8 | ✅ | Agent output (no `output_schema`) arrives as `str`; function-node dict output arrives as `dict`. Workflow `START` input arrives as `types.Content`. |
+| T0.6 | ✅ | Images appended in `before_model_callback` reach Gemini (4 screens identified in order); Groq requests carry 0 image parts. Lock-guarded budget refuses calls past the cap under parallel runs; refused calls never reach the model. |
+
+Findings for later tasks:
+- `gemini-2.5-flash` returns 404 for new API users; `gemini-3.8-flash`, `gemini-3.5-flash`, `gemini-flash-latest` returned 503 (high demand) on the spike day. `gemini-3-flash-preview` worked. `groq/llama-3.3-70b-versatile` is no longer listed on Groq; `groq/openai/gpt-oss-120b` works.
+- On 503 the google-genai client retried internally for ~180 s before failing → breaks NFR-1. T6.3 must set an explicit HTTP timeout/retry policy for Gemini.
 
 ---
 

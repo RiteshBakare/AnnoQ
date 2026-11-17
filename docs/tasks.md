@@ -7,14 +7,15 @@ Refs: `architecture.md` (A), `spec.md` (S).
 
 ## M0 — Spike & scaffold (de-risk the ADK 2.0 graph first)
 
-- [ ] **T0.1 Scaffold repo** — folders per A§14, `requirements.txt` (`google-adk>=2.0`, litellm, jinja2, pydantic, python-dotenv, requests, pillow, pytest), `.env.example` (S§5), `.gitignore`, `run.py` shim.
+- [x] **T0.1 Scaffold repo** — folders per A§14, `requirements.txt` (`google-adk>=2.0`, litellm, jinja2, pydantic, python-dotenv, requests, pillow, pytest), `.env.example` (S§5), `.gitignore`, `run.py` shim.
   *Done when:* `python run.py --help` works; `python -c "from google.adk import Workflow"` works.
-- [ ] **T0.2 Spike: graph basics** — tiny `Workflow` with function nodes: `START → fn → fn`, `Event(output=…, state=…)`, running via `Runner` + `InMemorySessionService`, reading final state. Verify S§9.1 **A1, A8**.
-- [ ] **T0.3 Spike: fan-out/join + nested workflow** — `specialist_panel` as nested `Workflow` with 3 dummy agents + `JoinNode`, used as a node in the parent graph; check join output shape, `max_concurrency`. Verify **A2, A3, A7**.
-- [ ] **T0.4 Spike: routing + retry loop** — router returning `Event(route=…)`, dict edges, loop edge back to an earlier node (node with 2 inbound edges), retry counter in state. Verify **A4**.
+- [x] **T0.2 Spike: graph basics** — tiny `Workflow` with function nodes: `START → fn → fn`, `Event(output=…, state=…)`, running via `Runner` + `InMemorySessionService`, reading final state. Verify S§9.1 **A1, A8**.
+- [x] **T0.3 Spike: fan-out/join + nested workflow** — `specialist_panel` as nested `Workflow` with 3 dummy agents + `JoinNode`, used as a node in the parent graph; check join output shape, `max_concurrency`. Verify **A2, A3, A7**.
+- [x] **T0.4 Spike: routing + retry loop** — router returning `Event(route=…)`, dict edges, loop edge back to an earlier node (node with 2 inbound edges), retry counter in state. Verify **A4**.
   *Fallback decision:* if cycles/multi-inbound don't work, switch retries to a dynamic node (`@node` + `ctx.run_node`) — record the decision.
-- [ ] **T0.5 Spike: Groq agent node** — `Agent(model=LiteLlm("groq/…"), mode="single_turn")` receiving a rendered Jinja2 user message, JSON output; test with and without `response_format={"type":"json_object"}`; `on_model_error_callback` stub so a join still completes. Verify **A5, A6**.
-- [ ] **T0.6 Spike: Gemini multi-image agent node** — Gemini `Agent` node; attach 4 images via `before_model_callback`; confirm Groq nodes never receive images; budget callback returns stub on call #10 (thread-safe under parallel run). 
+  *Result:* loops + multi-inbound work in google-adk 2.14.1; no fallback needed (S§9.2).
+- [x] **T0.5 Spike: Groq agent node** — `Agent(model=LiteLlm("groq/…"), mode="single_turn")` receiving a rendered Jinja2 user message, JSON output; test with and without `response_format={"type":"json_object"}`; `on_model_error_callback` stub so a join still completes. Verify **A5, A6**.
+- [x] **T0.6 Spike: Gemini multi-image agent node** — Gemini `Agent` node; attach 4 images via `before_model_callback`; confirm Groq nodes never receive images; budget callback returns stub on call #10 (thread-safe under parallel run). 
   *Done when:* all A1–A8 are confirmed or have a recorded fallback.
 
 ---

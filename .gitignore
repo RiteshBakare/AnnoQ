@@ -9,3 +9,7 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# Run artifacts
+outputs/
+.pytest_cache/
