@@ -6,6 +6,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from .budget import LLMBudget
@@ -21,6 +22,8 @@ class RunContext:
     jira_key: str
     ticket_context: str = ""
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
+    out_dir: Path | None = None  # outputs/<KEY>_<ts>/; created on first write
+    jira: Any = None  # JiraClient (or a test double); None in dry-run without credentials
     budget: LLMBudget = field(init=False)
     image_parts: list[Any] = field(init=False)
     agent_models: dict[str, str] = field(default_factory=dict)  # agent name -> model name (filled in agents.py)
@@ -59,3 +62,9 @@ class RunContext:
     @property
     def marker(self) -> str:
         return self.flow.marker
+
+    def output_dir(self) -> Path:
+        if self.out_dir is None:
+            self.out_dir = Path("outputs") / f"{self.jira_key}_{time.strftime('%Y%m%d-%H%M%S')}"
+        self.out_dir.mkdir(parents=True, exist_ok=True)
+        return self.out_dir

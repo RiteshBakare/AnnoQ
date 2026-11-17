@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+PLANNED_CALLS = 8  # 1 analyst + 5 specialists + 1 curator + 1 auditor; the rest of the cap is the retry pool
+
 
 class LLMBudget:
     """Thread/async-safe counter. Hard ceiling HARD_LLM_CAP (9) whatever the configured value."""
@@ -64,7 +66,7 @@ def make_callbacks(rc: RunContext, attach_images: bool) -> dict[str, Any]:
             return stub_response({"error": "budget_exhausted"})
         if attach_images:
             llm_request.contents.append(types.Content(role="user", parts=list(rc.image_parts)))
-        model = llm_request.model or rc.agent_models.get(agent, "?")
+        model = rc.agent_models.get(agent) or llm_request.model or "?"
         rc.start_call(agent, model)
         log.info("LLM call #%d -> %s (%s)", rc.budget.used, agent, model)
         return None
@@ -86,7 +88,7 @@ def make_callbacks(rc: RunContext, attach_images: bool) -> dict[str, Any]:
     def on_model_error_callback(callback_context, llm_request, error):
         agent = callback_context.agent_name
         started = rc.end_call(agent)
-        model, t0 = started if started else (llm_request.model or "?", time.monotonic())
+        model, t0 = started if started else (rc.agent_models.get(agent) or llm_request.model or "?", time.monotonic())
         rc.record(LlmCallLog(agent=agent, model=model, seconds=round(time.monotonic() - t0, 2), ok=False))
         rc.warn(f"{agent}: model error {type(error).__name__}")
         log.warning("%s model error: %s", agent, str(error)[:300])

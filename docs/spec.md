@@ -565,6 +565,44 @@ The prompt files in `src/templates/` are now the source of truth for prompts; §
 
 **Replay of the saved M2 live outputs** (offline, no model calls; curator path): 27 / 17 / 9 final questions for shopping / login_otp / onboarding. Shopping has 6 FLOW questions, with the address clamped to S2–S4. On onboarding, the multi-screen SCREEN question was coerced to FLOW. Uncovered for the auditor: login `S1.E6, S2.E4`; onboarding's three "Next" buttons. The fallback alone would give 30 / 25 / 18.
 
+#### 9.6 M4 implementation notes (2026-11-17)
+
+**Graph.**
+- `src/workflow.py` holds the edge list. It is identical to §9 / A§5; `test_graph_matches_architecture` checks this.
+- `build_workflow(rc, agents=None)` takes the agents as an argument, so graph tests can pass in stub-model agents.
+- `run_workflow(rc)` runs the graph through `Runner(node=…)` and returns the final state.
+- `python -m src.workflow flows/<name>` prints the real graph as Mermaid. No LLM calls.
+
+**Nodes (`build_nodes(rc)`, 13 closures).**
+- Every state-bound parameter has a default.
+- **State keys:** `inventory`, `candidates`, `curated`, `curated_by` (`curator` | `fallback`), `audit_questions` (numbered, for the auditor's `n`), `coverage`, `audit_raw`, `questions`, `comment`, `retries_used`, `analyst_repair`, `curator_repair`, `fail_reason`, `result`.
+- Warnings go to `RunContext.warnings`, not to state.
+
+**Retry pool.**
+- Size = `budget.max − 8`: 1 with the default cap of 9, and 0 with `MAX_LLM_CALLS=8`.
+- The analyst and curator share it. The analyst uses it first simply because it runs first.
+- If the curator is still invalid when the pool is empty, the route is FALLBACK (no extra call).
+
+**Ordering.**
+- `coverage_check` runs the dedupe, numbers the questions for the auditor, and computes `uncovered`.
+- `finalize` runs caps → final numbering → floor warnings → `jira_comment.j2` render → size guard.
+- The template and `postprocess.comment_context` were pulled forward from T5.1, because `finalize` needs them.
+
+**`publish`.**
+- It writes `comment.txt` and the other artifacts **before** any Jira call.
+- In `--dry-run` it makes no Jira call at all.
+- Otherwise it checks the marker (unless `--force`) and makes exactly one POST.
+- A `JiraError` is returned as `result.jira_error`; the CLI maps it to exit 3 (T5.2).
+- `fail` writes `run_report.json` and sets `result.ok=False` (exit 2).
+
+**Call log.** Uses the configured model name for each agent (`rc.agent_models`), not the model name in the request.
+
+**Live check (shopping, cheap dev models, dry-run, no ticket context).**
+- 8 calls: 2 Gemini + 6 Groq, all ok, no retries.
+- 24 questions, 5 of them common: the address and the order summary are each asked once. Nothing left uncovered.
+- The auditor removed 2 duplicates and reworded 1 question.
+- **153 s in total.** Time per call: specialists 2–49 s (waiting on the Groq TPM limit), curator 44 s, auditor 49 s (flash-lite with 4 images). NFR-1 still depends on the Groq tier (§9.4).
+
 ---
 
 ## 10. Budget & model plumbing

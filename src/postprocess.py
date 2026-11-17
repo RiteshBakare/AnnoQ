@@ -42,6 +42,9 @@ class FlowIndex:
         self.element_rc = {ref: rc.id for rc in inv.recurring_components for ref in rc.element_refs}
         self.flagged = [e.id for s in inv.screens for e in s.elements if e.needs_clarification]
         self.complexity = {s.id: s.complexity for s in inv.screens}
+        self.names = {s.id: s.name for s in inv.screens}
+        self.labels = {FLOW: "Whole flow", **self.names, **{rc.id: rc.name for rc in inv.recurring_components},
+                       **{e.id: e.label for s in inv.screens for e in s.elements}}
 
     def known(self, ref: str) -> bool:
         return ref == FLOW or ref in self.pos or ref in self.element_screen or ref in self.rc_screens
@@ -434,3 +437,32 @@ def fit_to_size(questions: list[Question], render: Callable[[list[Question]], st
         text, dropped = render(qs), dropped + 1
     warnings = [f"comment over {max_chars} chars: dropped {dropped} question(s)"] if dropped else []
     return qs, text, warnings
+
+
+# --------------------------------------------------------------------------- comment context (T5.1 template input)
+
+def comment_context(questions: list[Question], inv: FlowInventory, owner_labels: dict[str, str], run_id: str,
+                    marker: str) -> dict:
+    """Template variables for jira_comment.j2: common (FLOW) section, per-screen sections, owner index."""
+    idx = FlowIndex(inv)
+
+    def view(q: Question) -> dict:
+        labels = list(dict.fromkeys(idx.labels.get(r, r) for r in q.element_refs))
+        label = ", ".join(labels[:3]) + (f" +{len(labels) - 3} more" if len(labels) > 3 else "")
+        return {**q.model_dump(), "element_label": label, "owner_label": owner_labels[q.owner],
+                "screen_names": [idx.names[s] for s in q.screens]}
+
+    owners = [o for o in OWNER_ORDER if any(q.owner == o for q in questions)]
+    sections = [{"id": s.id, "name": s.name,
+                 "questions": [view(q) for q in questions if q.scope == "SCREEN" and q.screens == [s.id]]}
+                for s in inv.screens]
+    return {
+        "flow_name": inv.flow_name, "flow_summary": inv.flow_summary, "n_screens": len(inv.screens),
+        "screens": [{"id": s.id, "name": s.name} for s in inv.screens],
+        "labels": [owner_labels[o] for o in owners] or list(owner_labels.values()),
+        "owner_index": [{"label": owner_labels[o], "numbers": [f"Q{q.n}" for q in questions if q.owner == o]}
+                        for o in owners],
+        "common": [view(q) for q in questions if q.scope == FLOW],
+        "screen_sections": [s for s in sections if s["questions"]],
+        "run_id": run_id, "marker": marker,
+    }

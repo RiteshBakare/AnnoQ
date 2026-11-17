@@ -61,18 +61,21 @@ Refs: `architecture.md` (A), `spec.md` (S).
 
 ## M4 — Graph workflow
 
-- [ ] **T4.1 `nodes.py`** — function nodes/routers: `build_analyst_input`, `validate_inventory`, `build_panel_input`, `merge_candidates` (≥3 of 5 usable), `build_curator_input`, `validate_curated`, `fallback_curate`, `coverage_check`, `build_audit_input`, `apply_patch`, `finalize`, `publish`, `fail`. **Dep:** T2.2, T3.x
-- [ ] **T4.2 `workflow.py`** — edge list per S§9 incl. nested `specialist_panel` (`max_concurrency`), retry loops, fallback route. **Dep:** T4.1, T2.3
-- [ ] **T4.3 Graph tests with stub agents** — scenarios in S§14 (retry, abort, partial panel, curator fallback, auditor invalid, budget ≤ 9). **Dep:** T4.2
-- [ ] **T4.4 Graph visualization check** — open the workflow in `adk web` (or print the graph) and compare with the Mermaid diagram in A§5; fix drift.
+- [x] **T4.1 `nodes.py`** — function nodes/routers: `build_analyst_input`, `validate_inventory`, `build_panel_input`, `merge_candidates` (≥3 of 5 usable), `build_curator_input`, `validate_curated`, `fallback_curate`, `coverage_check`, `build_audit_input`, `apply_patch`, `finalize`, `publish`, `fail`. **Dep:** T2.2, T3.x
+- [x] **T4.2 `workflow.py`** — edge list per S§9 incl. nested `specialist_panel` (`max_concurrency`), retry loops, fallback route. **Dep:** T4.1, T2.3
+- [x] **T4.3 Graph tests with stub agents** — scenarios in S§14 (retry, abort, partial panel, curator fallback, auditor invalid, budget ≤ 9). **Dep:** T4.2
+- [x] **T4.4 Graph visualization check** — open the workflow in `adk web` (or print the graph) and compare with the Mermaid diagram in A§5; fix drift.
+  *Result:* `python -m src.workflow flows/<name>` prints the real graph as Mermaid; it matches A§5 with no drift. `test_graph_matches_architecture` keeps it that way. Live `--dry-run`-equivalent on shopping with the cheap models: 8 calls (2 Gemini + 6 Groq), 24 questions (5 common), 153 s on the Groq free tier (S§9.6).
 
 ---
 
 ## M5 — CLI, rendering, Jira
 
 - [ ] **T5.1 `jira_comment.j2` + render helper** — Common section + per-screen sections, owner index, blocker marker, screen names; snapshot tests for 1- and 4-screen flows. **Dep:** T1.5, T3.4
+  *Started in M4:* `finalize` needed it, so the template and `postprocess.comment_context` exist. Still to do: the snapshot tests and a review of the layout.
 - [ ] **T5.2 `cli.py`** — args, env fallbacks, folder/single-file detection, build `RunContext`, fetch Jira context, run workflow via `Runner`, read `state["result"]`, exit codes (S§13). **Dep:** T4.2
 - [ ] **T5.3 Artifacts** — `flow_inventory.json`, `candidates.json`, `curated.json`, `audit.json`, `comment.txt`, `run_report.json`.
+  *Started in M4:* the `publish` and `fail` nodes already write these files. Still to do: verify them through the CLI.
 - [ ] **T5.4 End-to-end `--dry-run`** — one 4-screen shopping flow; verify `llm_calls == 8` (2 Gemini + 6 Groq), models per call, comment structure.
 
 ---
