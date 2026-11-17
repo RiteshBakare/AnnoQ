@@ -1,0 +1,79 @@
+{
+  "jira_key": "SCRUM-1",
+  "flow_sha": "4e53407f0065a46ac1d4686202a01f0f349a6d1f5a92bf58bc4b32d78aecb6fb",
+  "screens": 4,
+  "llm_calls": 8,
+  "calls": [
+    {
+      "agent": "screen_analyst",
+      "model": "gemini-3.1-flash-lite",
+      "seconds": 7.81,
+      "prompt_tokens": 5444,
+      "output_tokens": 3045,
+      "ok": true
+    },
+    {
+      "agent": "interaction_agent",
+      "model": "groq/openai/gpt-oss-20b",
+      "seconds": 2.14,
+      "prompt_tokens": 2442,
+      "output_tokens": 959,
+      "ok": true
+    },
+    {
+      "agent": "business_rule_agent",
+      "model": "groq/openai/gpt-oss-20b",
+      "seconds": 2.27,
+      "prompt_tokens": 2449,
+      "output_tokens": 1165,
+      "ok": true
+    },
+    {
+      "agent": "data_source_agent",
+      "model": "groq/openai/gpt-oss-20b",
+      "seconds": 26.25,
+      "prompt_tokens": 2464,
+      "output_tokens": 1005,
+      "ok": true
+    },
+    {
+      "agent": "state_condition_agent",
+      "model": "groq/openai/gpt-oss-20b",
+      "seconds": 51.66,
+      "prompt_tokens": 2441,
+      "output_tokens": 630,
+      "ok": true
+    },
+    {
+      "agent": "validation_agent",
+      "model": "groq/openai/gpt-oss-20b",
+      "seconds": 75.37,
+      "prompt_tokens": 2445,
+      "output_tokens": 529,
+      "ok": true
+    },
+    {
+      "agent": "flow_curator",
+      "model": "groq/openai/gpt-oss-20b",
+      "seconds": 39.79,
+      "prompt_tokens": 4625,
+      "output_tokens": 2100,
+      "ok": true
+    },
+    {
+      "agent": "auditor",
+      "model": "gemini-3.1-flash-lite",
+      "seconds": 5.38,
+      "prompt_tokens": 7320,
+      "output_tokens": 155,
+      "ok": true
+    }
+  ],
+  "question_count": 24,
+  "common_count": 3,
+  "posted": true,
+  "skipped_reason": null,
+  "warnings": [
+    "cap MAX_Q_PER_SCREEN (S2)=8: dropped 1 lower-priority question(s)"
+  ]
+}

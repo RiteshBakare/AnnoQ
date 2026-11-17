@@ -1,0 +1,57 @@
+{
+  "_note": "PROXY reference questions written by the developer from the synthetic flows (T6.1). Replace or extend with the questions the annotation team normally asks. A topic matches a generated question when the question text contains at least one word/phrase from EVERY group (case-insensitive). ask_once=true: the topic must be covered by a FLOW-scope question.",
+  "shopping": [
+    {"topic": "Cart items: data source", "match": [["cart item", "items", "cart list"], ["api", "endpoint", "source", "service", "fetch"]]},
+    {"topic": "Quantity stepper / Remove behaviour", "match": [["quantity", "remove", "stepper"]]},
+    {"topic": "Promo code apply / validation", "match": [["promo", "coupon", "save10"]]},
+    {"topic": "Order summary totals (asked once)", "match": [["total", "subtotal", "order summary", "discount"]], "ask_once": true},
+    {"topic": "Saved address source (asked once)", "match": [["address"]], "ask_once": true},
+    {"topic": "Shipping form validation", "match": [["pincode", "phone", "full name"], ["valid", "format", "required", "rule", "error"]]},
+    {"topic": "Delivery speed / express charge", "match": [["express", "delivery speed", "standard", "shipping option"]]},
+    {"topic": "Payment methods / COD fee", "match": [["payment", "upi", "cash on delivery", "cod"]]},
+    {"topic": "Place order action and failure", "match": [["place order"]]},
+    {"topic": "Order number / estimated delivery source", "match": [["order #", "order number", "order id", "estimated delivery", "delivery date"]]},
+    {"topic": "Track order / continue shopping", "match": [["track order", "continue shopping"]]}
+  ],
+  "login_otp": [
+    {"topic": "Send OTP API", "match": [["otp"], ["api", "endpoint", "send", "sent", "request"]]},
+    {"topic": "Mobile number validation", "match": [["mobile", "phone"], ["valid", "format", "digit", "error", "mask"]]},
+    {"topic": "Wrong OTP attempts / lockout", "match": [["attempt", "lock", "incorrect"]]},
+    {"topic": "Resend timer", "match": [["resend", "timer", "countdown"]]},
+    {"topic": "Verify button / verification", "match": [["verify"]]},
+    {"topic": "Change number", "match": [["change number"]]},
+    {"topic": "Log in with email", "match": [["email"], ["log in", "login", "instead", "link"]]},
+    {"topic": "Profile fields validation", "match": [["full name", "email", "date of birth", "dob", "gender"], ["valid", "required", "format", "error", "mandatory"]]},
+    {"topic": "Profile photo upload", "match": [["photo", "picture", "avatar", "upload"]]},
+    {"topic": "Skip for now", "match": [["skip"]]}
+  ],
+  "onboarding": [
+    {"topic": "Skip destination (asked once)", "match": [["skip"]], "ask_once": true},
+    {"topic": "Carousel content source", "match": [["illustration", "title", "content", "copy", "text", "image"], ["source", "cms", "static", "api", "locali", "translat", "service", "url"]]},
+    {"topic": "Interests list source", "match": [["interest", "chip"], ["source", "api", "endpoint", "list", "fetch"]]},
+    {"topic": "Minimum selection / Continue enabled", "match": [["at least", "minimum", "min ", "continue"]]},
+    {"topic": "Saving the selected interests", "match": [["save", "saved", "persist", "store", "submit", "sent"], ["interest", "selection", "selected"]]},
+    {"topic": "Next / Get started navigation", "match": [["next", "get started"]]}
+  ],
+  "single_screen": [
+    {"topic": "Product data source", "match": [["product", "price", "rating", "wallet"], ["api", "endpoint", "source", "service"]]},
+    {"topic": "Image gallery", "match": [["photo", "image", "gallery", "1/5", "carousel"]]},
+    {"topic": "Colour variant", "match": [["colour", "color", "variant"]]},
+    {"topic": "Pincode delivery check", "match": [["pincode", "check", "delivery"]]},
+    {"topic": "Stock indicator", "match": [["stock", "left"]]},
+    {"topic": "Add to cart / Buy now", "match": [["add to cart", "buy now"]]},
+    {"topic": "Discount / MRP display", "match": [["discount", "25%", "mrp", "off"]]}
+  ],
+  "repeated_component": [
+    {"topic": "Profile card source (asked once)", "match": [["profile", "member", "gold", "user info", "user details"]], "ask_once": true},
+    {"topic": "Edit profile action", "match": [["edit"]]},
+    {"topic": "Bottom tab bar (asked once)", "match": [["tab", "bottom nav", "navigation bar"]], "ask_once": true},
+    {"topic": "Notification toggles persistence", "match": [["notification", "toggle", "order updates", "offers", "price drop"]]},
+    {"topic": "Order updates cannot be turned off", "match": [["active order", "turn off", "cannot", "can't", "disable"]]},
+    {"topic": "Remove payment method", "match": [["remove"]]},
+    {"topic": "Set as default enabled", "match": [["default"]]},
+    {"topic": "Add payment method", "match": [["add payment", "add a payment", "new payment"]]},
+    {"topic": "Saved card / UPI data source", "match": [["card", "upi", "payment method"], ["source", "api", "endpoint", "stored", "mask", "token"]]},
+    {"topic": "Log out", "match": [["log out", "logout"]]}
+  ]
+}

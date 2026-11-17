@@ -85,13 +85,20 @@ Refs: `architecture.md` (A), `spec.md` (S).
 ## M6 — Quality loop & hardening
 
 - [ ] **T6.1 Golden set** — 5 flows: shopping (4 screens: cart, shipping, place order, success), login + OTP, onboarding, a single screen, a flow with a repeated component; with the annotation team write the questions they'd normally ask (recall reference).
+  *Status (developer part done):* 5 synthetic flows in `flows/` (`python -m tests.fixtures.make_sample_flows`: shopping 4, login_otp 3, onboarding 4, single_screen 1, repeated_component 3) and **proxy** reference topics in `tests/golden/references.json`. **Still open:** real designs + the annotation team's usual questions.
 - [ ] **T6.2 Evaluate & tune** — annotators rate each question (useful / generic / answerable-from-image / duplicate / wrong scope); measure recall; tune prompts, targets, dedupe thresholds (Jaccard 0.6), lens boundaries. **Dep:** T6.1, T5.4
   *Targets:* ≥ 80 % useful, ≥ 90 % recall, 0 cross-screen duplicates, 0 answerable-from-image.
-- [ ] **T6.3 Rate limits** — verify 5 parallel Groq calls on free tier; tune `PANEL_CONCURRENCY`; HTTP backoff for 429/5xx (not counted as logical calls); friendly quota message.
-- [ ] **T6.4 Real post + idempotency** — post to sandbox ticket; re-run → marker skip; `--force` → second comment; confirm `@product team` plain text doesn't notify anyone; test a comment near the size guard.
-- [ ] **T6.5 Edge cases** — 1 image, 8 images, 9 images (exit 1), unsorted filenames, non-image files in folder, very tall image (downscale only).
-- [ ] **T6.6 README + demo script** — setup, run examples, graph diagram, before/after Jira comment, known limitations (file-order = flow order, plain-text mentions, ≤ 8 screens).
+  *Status (automated part done):* `python -m tests.live.evaluate` writes `outputs/eval/summary.md` + `<flow>_rating.csv` sheets for annotators. Cheap-model results: proxy recall 90–100 %, ask-once ok on every repeated component, 0 cross-screen duplicates, caps ok, 8 calls per run. Tuning done: id → label text clean-up; Jaccard dedupe also needs element-label overlap (no false merges of templated questions). **Still open:** annotator ratings (≥ 80 % useful, 0 answerable-from-image) on real designs (S§9.8).
+- [x] **T6.3 Rate limits** — verify 5 parallel Groq calls on free tier; tune `PANEL_CONCURRENCY`; HTTP backoff for 429/5xx (not counted as logical calls); friendly quota message.
+  *Result:* `PANEL_CONCURRENCY` stays 5. Groq free tier is TPM-bound (8k/min); lower concurrency does not reduce tokens, and 429 waits happen inside one logical call. Gemini: 1 transport retry, 75 s timeout. Friendly provider messages in the report (rate limit / daily quota / 503 / timeout / bad key). The daily quota (TPD 200k) was hit once and ended cleanly with exit 2 (S§9.8).
+- [x] **T6.4 Real post + idempotency** — post to sandbox ticket; re-run → marker skip; `--force` → second comment; confirm `@product team` plain text doesn't notify anyone; test a comment near the size guard.
+  *Result:* SCRUM-1, shopping: post (8 calls, posted) → re-run skipped **before any LLM call** (0 calls, new CLI pre-check) → `--force` posted a 2nd comment. Jira shows 2 marked comments; `@product team`/`@tech team` are plain text (no `[~…]`, no user links in the rendered HTML), headings and escaped `[CATEGORY]` render. Size guard tested offline (`test_size_guard_near_jira_limit`); no 30k comment was posted.
+- [x] **T6.5 Edge cases** — 1 image, 8 images, 9 images (exit 1), unsorted filenames, non-image files in folder, very tall image (downscale only).
+  *Result:* `tests/test_hardening.py` through the CLI: 1 image, 8 images (still 8 calls), 9 images (exit 1, "split this flow"), unsorted names (natural order), non-image/hidden files and sub-folders ignored, 750×6000 image downscaled to 250×2000.
+- [x] **T6.6 README + demo script** — setup, run examples, graph diagram, before/after Jira comment, known limitations (file-order = flow order, plain-text mentions, ≤ 8 screens).
+  *Result:* `README.md`: setup, `.env`, run examples, Mermaid graph, before/after (real posted comment), 5-minute demo script, dev tools, known limitations. Demo run report kept in `docs/demo_run_report.json`.
 - [ ] **T6.7 Final acceptance check** — tick every box in S§14; keep `run_report.json` (shows 8 calls, 2 Gemini / 6 Groq) for the demo.
+  *Status:* S§14 checked. 5 of 9 boxes are met. Open: annotator review (2 boxes), final coverage on repeated_component (3 elements left after the audit), and ≤ 90 s (needs a paid Groq tier). See S§9.8.
 
 ---
 

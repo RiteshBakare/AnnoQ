@@ -32,6 +32,13 @@ SPECIALISTS: tuple[tuple[str, str, str], ...] = (
 )
 SPECIALIST_TAGS = {name: tag for name, _, tag in SPECIALISTS}
 TEXT_MAX_OUTPUT_TOKENS = 4096
+# Bounded Gemini transport policy (T6.3): without it a 503 "high demand" made the SDK retry for ~180 s. One retry after
+# 3 s on 429/5xx, 75 s timeout per attempt; a final failure becomes the error stub (analyst -> RETRY/ABORT route,
+# auditor -> patch skipped). Transport retries are below the model callbacks, so the LLM budget counts one call.
+GEMINI_HTTP = types.HttpOptions(
+    timeout=75_000,
+    retry_options=types.HttpRetryOptions(attempts=2, initial_delay=3, max_delay=10,
+                                         http_status_codes=[429, 500, 502, 503, 504]))
 
 
 @dataclass(frozen=True)
@@ -49,7 +56,8 @@ def _make_agent(rc: RunContext, name: str, model_name: str, instruction: str, vi
     s = rc.settings
     if gemini:
         config = types.GenerateContentConfig(temperature=s.temperature_vision,
-                                             response_mime_type="application/json")  # Gemini JSON mode
+                                             response_mime_type="application/json",  # Gemini JSON mode
+                                             http_options=GEMINI_HTTP)
     else:
         # Low reasoning effort (LiteLLM maps it to reasoning_effort where supported) keeps output tokens small:
         # without it gpt-oss spent the whole output budget on reasoning and returned no JSON, and every token

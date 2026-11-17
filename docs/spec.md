@@ -645,6 +645,51 @@ The prompt files in `src/templates/` are now the source of truth for prompts; §
 - **160 s in total**: analyst 12 s; specialists 2–59 s and curator 48 s (Groq TPM waits); auditor 34 s until it failed.
 - Still open for T6.3: Gemini 503 retry/timeout policy, and the Groq tier vs NFR-1.
 
+#### 9.8 M6 results (2026-11-17)
+
+**Hardening (T6.3).**
+- **Gemini:** `http_options` on both vision agents: timeout 75 s, 2 attempts, retry on 429/5xx. A final failure → error stub → the existing graph routes handle it.
+- **Groq:** 429 waits stay inside the logical call (§9.4). `PANEL_CONCURRENCY` stays 5: the free tier is limited by tokens per minute, so lower concurrency does not save tokens.
+- **Friendly errors:** `friendly_error()` turns provider errors into one readable line in the report (rate limit or daily quota, 503 overload, timeout, rejected key).
+- **Daily quota:** the Groq daily quota (TPD 200k on `gpt-oss-20b`) was used up by a day of tuning. The run ended cleanly with exit 2 and a quota message. `qwen/qwen3.8-27b` cannot serve as a backup: its free tier caps output at 1,000 tokens/min.
+
+**CLI idempotency pre-check.**
+- Without `--dry-run` / `--force`, the CLI checks the marker **before** running the graph, so a repeat run spends 0 LLM calls.
+- `publish` still checks again, for race safety.
+- Jira semantics are unchanged: skip when the marker is there; `--force` posts again.
+
+**Question text.** `clean_question(text, labels)` drops ids in brackets and replaces bare ids (`S1.E3`, `RC1`, `S2`) with the on-screen label or screen name.
+
+**Dedupe fix (from the eval).**
+- A Jaccard merge now also needs the questions' element **labels** to overlap.
+- Reason: templated questions ("When is <X> enabled or disabled?") about different elements scored high on Jaccard and could be merged wrongly.
+- Same-RC merges are unchanged.
+
+**New artifact.** `questions.json` is the final numbered list, exactly as rendered.
+
+**Golden set (synthetic) and automated evaluation** (`python -m tests.live.evaluate`; cheap models; dry-run):
+
+| flow | screens | calls | questions (common) | proxy recall | ask-once | x-screen dupes | uncovered after audit |
+|---|---|---|---|---|---|---|---|
+| shopping | 4 | 8 | 30 (6) | 91 % | ok | 0 | n/a* |
+| login_otp | 3 | 8 | 14 (3) | 90 % | – | 0 | 0 |
+| onboarding | 4 | 8 | 13 (5) | 100 % | ok | 0 | 0 |
+| single_screen | 1 | 8 | 8 (0) | 100 % | – | 0 | 0 |
+| repeated_component | 3 | 8 | 16 (7) | 90 % | ok | 0 | 3 |
+
+\* That run was made before `questions.json` existed.
+- Model time per run: 58–132 s on the Groq free tier.
+- Proxy recall uses keyword topics written by the developer; it is a smoke signal, not the annotator target.
+
+**Sandbox post (T6.4).** Results are in tasks.md T6.4.
+
+**Acceptance (§14).**
+- *Met (5 of 9):* the call budget, 2 Gemini + 6 Groq calls, models from `.env`, the caps, one comment with plain labels and contiguous numbers.
+- *Open:*
+  - annotator review: no duplicates and ≥ 80 % useful / ≥ 90 % recall;
+  - full coverage on repeated_component (3 flagged elements left after the audit);
+  - ≤ 90 s: about 1–2.5 min per run on the Groq free tier; needs a paid tier.
+
 ---
 
 ## 10. Budget & model plumbing
@@ -802,12 +847,12 @@ class JiraClient:
 - One real post to a sandbox ticket; re-run (marker skip); `--force`.
 
 ### Acceptance criteria
-- [ ] `run_report.json.llm_calls ≤ 9` always; **8** on a normal run, independent of screen count.
-- [ ] Exactly 2 Gemini calls (both with all images) and 6 Groq calls on a normal run; verified from the report.
-- [ ] Models change via `.env` only.
+- [x] `run_report.json.llm_calls ≤ 9` always; **8** on a normal run, independent of screen count.
+- [x] Exactly 2 Gemini calls (both with all images) and 6 Groq calls on a normal run; verified from the report.
+- [x] Models change via `.env` only.
 - [ ] A component repeated on 3 screens (e.g. address) yields **one** FLOW question listing those screens; **0 duplicate** questions across screens on golden flows (annotator review).
-- [ ] Per-screen ≤ 8, flow-level ≤ 8, total ≤ 30; simple screens get fewer questions.
+- [x] Per-screen ≤ 8, flow-level ≤ 8, total ≤ 30; simple screens get fewer questions.
 - [ ] Every flagged element/component is covered or justified by the auditor.
 - [ ] 0 questions answerable from the image; ≥ 80 % rated useful, ≥ 90 % recall vs annotators' usual questions.
-- [ ] Exactly one comment posted; labels are plain `@product team` / `@tech team`; numbering contiguous.
+- [x] Exactly one comment posted; labels are plain `@product team` / `@tech team`; numbering contiguous.
 - [ ] ≤ 90 s for 8 screens.

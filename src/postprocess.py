@@ -94,9 +94,15 @@ def _load(raw: Any) -> Any:
 _ID_IN_TEXT = re.compile(r"\s*\(\s*(?:RC\d+|S\d+(?:\.E\d+)?)(?:\s*[,/]\s*(?:RC\d+|S\d+(?:\.E\d+)?))*\s*\)")
 
 
-def clean_question(value: Any) -> str:
-    """Collapse whitespace, drop internal ids the PMO can't read ("(RC1)", "(S2.E5, S3.E1)"), end with '?'."""
-    text = " ".join(_ID_IN_TEXT.sub("", str(value or "")).split())
+_BARE_ID = re.compile(r"\b(RC\d+|S\d+(?:\.E\d+)?)\b")  # element, component and screen ids
+
+
+def clean_question(value: Any, labels: dict[str, str] | None = None) -> str:
+    """Make question text readable for the PMO: drop parenthesised ids ("(RC1)", "(S2.E5, S3.E1)"), replace bare ids
+    with their on-screen label ("shown in S1.E3" -> 'shown in "Cart items"'), collapse whitespace, end with '?'."""
+    text = _ID_IN_TEXT.sub("", str(value or ""))
+    text = _BARE_ID.sub(lambda m: f'"{labels[m.group(1)]}"' if labels and m.group(1) in labels else "", text)
+    text = " ".join(text.split())
     return text if not text or text.endswith("?") else text.rstrip(".") + "?"
 
 
@@ -186,7 +192,7 @@ def validate_candidate(item: Any, inv: FlowInventory | FlowIndex, source: str | 
     category = str(item.get("category") or "").strip().upper()
     if category not in CATEGORIES:
         raise InvalidOutput(f"unknown category {category!r}")
-    question = clean_question(item.get("question"))
+    question = clean_question(item.get("question"), idx.labels)
     if not 8 <= len(question) <= 300:
         raise InvalidOutput(f"question length {len(question)} outside 8-300")
     hint = " ".join(str(item.get("answer_hint") or "").split())
@@ -278,13 +284,17 @@ def dedupe_across_screens(questions: list[Candidate], inv: FlowInventory,
 
     rcs = [idx.single_rc(q.element_refs) for q in questions]
     toks = [tokens(q.question) for q in questions]
+    # Templated questions ("When is <X> enabled or disabled?") score high on Jaccard even for different elements, so a
+    # Jaccard merge also needs the anchored elements' labels to overlap (same subject on another screen).
+    subj = [tokens(" ".join(idx.labels.get(r, "") for r in q.element_refs)) for q in questions]
     for i in range(n):
         for j in range(i + 1, n):
             a, b = questions[i], questions[j]
             if a.category != b.category:
                 continue
             same_rc = rcs[i] is not None and rcs[i] == rcs[j]
-            if same_rc or (set(a.screens) != set(b.screens) and jaccard(toks[i], toks[j]) >= threshold):
+            similar = jaccard(toks[i], toks[j]) >= threshold and bool(subj[i] & subj[j])
+            if same_rc or (set(a.screens) != set(b.screens) and similar):
                 parent[find(j)] = find(i)
 
     groups: dict[int, list[int]] = {}
@@ -368,7 +378,7 @@ def apply_patch(questions: list[Question], raw: Any, inv: FlowInventory) -> tupl
                 warnings.append(f"auditor remove Q{n}: reason {op.get('reason')!r} not allowed")
     for op in data.get("reword") or []:
         if (n := target(op, "reword")) is not None:
-            text = clean_question(op.get("question"))
+            text = clean_question(op.get("question"), idx.labels)
             if 8 <= len(text) <= 300:
                 by_n[n].question = text
             else:

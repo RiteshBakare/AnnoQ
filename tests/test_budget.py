@@ -88,4 +88,4 @@ def test_error_callback_stub_logged_once(make_flow_dir):
     assert json.loads(stub.content.parts[0].text)["error"] == "model_error"
     cbs["after_model_callback"](ctx("validation_agent"), SimpleNamespace(partial=False, usage_metadata=None))
     assert [(c.agent, c.ok) for c in rc.calls] == [("validation_agent", False)]
-    assert rc.budget.used == 1 and "validation_agent: model error RuntimeError" in rc.warnings
+    assert rc.budget.used == 1 and "validation_agent: model error RuntimeError from groq/y" in rc.warnings

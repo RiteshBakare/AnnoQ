@@ -56,6 +56,22 @@ def stub_response(payload: dict[str, Any]) -> LlmResponse:
     return LlmResponse(content=types.Content(role="model", parts=[types.Part(text=json.dumps(payload))]))
 
 
+def friendly_error(error: Exception, model: str) -> str:
+    """One readable line for the run report / console (T6.3); the raw text goes to the debug log only."""
+    text, name = str(error).lower(), type(error).__name__
+    provider = "Groq" if model.startswith("groq/") else "Gemini" if model.startswith("gemini") else model
+    if "ratelimit" in name.lower() or any(k in text for k in ("rate limit", "429", "resource_exhausted", "quota")):
+        return (f"{provider} rate limit or quota reached ({name}) for {model}. Wait a minute and re-run, or move "
+                f"to a paid tier / another model in .env.")
+    if "503" in text or "unavailable" in text or "overloaded" in text or "high demand" in text:
+        return f"{provider} is overloaded (503) for {model}. Re-run later or pick another model in .env."
+    if "timeout" in name.lower() or "timed out" in text or "deadline" in text:
+        return f"{provider} timed out for {model}."
+    if "401" in text or "403" in text or "api key" in text or "authentication" in text:
+        return f"{provider} rejected the API key for {model} ({name}). Check the key in .env."
+    return f"model error {name} from {model}"
+
+
 def make_callbacks(rc: RunContext, attach_images: bool) -> dict[str, Any]:
     """Callbacks for Agent(**make_callbacks(rc, attach_images=...)). Only vision agents may attach images."""
 
@@ -90,7 +106,7 @@ def make_callbacks(rc: RunContext, attach_images: bool) -> dict[str, Any]:
         started = rc.end_call(agent)
         model, t0 = started if started else (rc.agent_models.get(agent) or llm_request.model or "?", time.monotonic())
         rc.record(LlmCallLog(agent=agent, model=model, seconds=round(time.monotonic() - t0, 2), ok=False))
-        rc.warn(f"{agent}: model error {type(error).__name__}")
+        rc.warn(f"{agent}: {friendly_error(error, model)}")
         log.warning("%s model error: %s", agent, str(error)[:300])
         return stub_response({"error": "model_error", "detail": type(error).__name__})
 

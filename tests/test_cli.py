@@ -102,8 +102,11 @@ def test_post_exit_0_and_marker_skip_and_force(env, capsys):
     jira = FakeJira()
     assert env(jira=jira) == 0 and len(jira.posts) == 1 and jira.posts[0][0] == "SCRUM-1"
     marked = FakeJira(marker=True)
+    env.state["rc"] = None
     assert env(jira=marked) == 0 and not marked.posts
-    assert "skipped: marker already on the ticket" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Skipped: SCRUM-1 already has the questions" in out and "LLM calls: 0" in out
+    assert env.state["rc"] is None  # pre-check: agents never built, no LLM call spent
     assert env("--force", jira=marked) == 0 and len(marked.posts) == 1
 
 

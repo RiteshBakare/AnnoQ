@@ -271,11 +271,68 @@ def onboarding(out: Path):
     s.save(out / "04_interests.png")
 
 
+def single_screen(out: Path):
+    s = Screen("Product details")
+    s.d.rounded_rectangle((16, s.y, W - 16, s.y + 220), 10, fill="#eef1f4")
+    s.d.text((W / 2 - 40, s.y + 100), "Product photo", font=font(14), fill=MUTED)
+    s.d.text((W - 60, s.y + 196), "1/5", font=font(12), fill=MUTED)
+    s.y += 236
+    s.text("Classic Leather Wallet", 20, True)
+    s.text("4.3 (1,284 ratings)", 13, color=MUTED)
+    s.row("Rs. 1,499", "Rs. 1,999  25% off", 18, True)
+    s.text("Inclusive of all taxes", 12, color=MUTED)
+    s.text("Colour", 14, True, gap=6)
+    s.radio("Tan", selected=True)
+    s.radio("Black")
+    s.input("Deliver to pincode", "411001")
+    s.d.text((W - 70, s.y - 40), "Check", font=font(14, True), fill=BRAND)
+    s.text("Delivery by Thu, 20 Nov · Free", 13, color=OK)
+    s.text("Only 3 left in stock", 13, color="#cf222e")
+    s.button("Add to cart")
+    s.button("Buy now", primary=False)
+    s.save(out / "01_product_details.png")
+
+
+def repeated_component(out: Path):
+    """Account settings: the same profile card and bottom tab bar repeat on all three screens."""
+    def profile_and_tabs(s: Screen, active: int):
+        s.card(["Ritu Sharma", "ritu.sharma@example.com", "Gold member · since 2021"], "Edit")
+        y = H - 64
+        s.d.line((0, y, W, y), fill=LINE)
+        for i, tab in enumerate(["Home", "Orders", "Wallet", "Account"]):
+            s.d.text((22 + i * 95, y + 22), tab, font=font(13, i == active), fill=BRAND if i == active else MUTED)
+
+    s = Screen("Account", back=False)
+    profile_and_tabs(s, 3)
+    for item in ["My addresses", "Payment methods", "Notifications", "Privacy & data", "Help centre"]:
+        s.row(item, ">")
+        s.d.line((16, s.y - 4, W - 16, s.y - 4), fill=LINE)
+    s.link("Log out", center=False)
+    s.save(out / "01_account.png")
+
+    s = Screen("Notifications")
+    profile_and_tabs(s, 3)
+    for label, on in [("Order updates", True), ("Offers & promotions", False), ("Price drop alerts", True)]:
+        s.row(label, "ON" if on else "OFF", color=OK if on else MUTED)
+    s.text("You can't turn off order updates for active orders.", 12, color=MUTED)
+    s.save(out / "02_notifications.png")
+
+    s = Screen("Payment methods")
+    profile_and_tabs(s, 3)
+    s.card(["HDFC Credit Card", "**** **** **** 4821 · Expires 08/27"], "Remove")
+    s.card(["UPI", "ritu@okhdfc"], "Remove")
+    s.link("+ Add payment method", center=False)
+    s.button("Set as default", disabled=True)
+    s.save(out / "03_payment_methods.png")
+
+
 def main(out_dir: str = "flows") -> None:
     root = Path(out_dir)
     shopping(root / "shopping")
     login_otp(root / "login_otp")
     onboarding(root / "onboarding")
+    single_screen(root / "single_screen")
+    repeated_component(root / "repeated_component")
     print("wrote", sorted(str(p) for p in root.glob("*/*.png")))
 
 

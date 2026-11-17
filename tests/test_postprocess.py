@@ -179,21 +179,22 @@ def test_same_address_question_on_three_screens_becomes_one_flow_question():
 
 
 def test_jaccard_merge_rules():
-    a = cand("When the user taps Continue what API call is made and what happens next?", "ACTION", ["S2"], ["S2.E4"])
-    b = cand("When the user taps Place order what API call is made and what happens next?", "ACTION", ["S3"],
-             ["S3.E3"], priority="P2", sources=["IA"])
+    a = cand("When the user taps Place order what API call is made and what happens next?", "ACTION", ["S3"],
+             ["S3.E3"])
+    b = cand("When the user taps Place order what API call is made and what happens after?", "ACTION", ["S1", "S3"],
+             ["S1.E3", "S3.E3"], priority="P2", sources=["IA"])
     other_cat = cand(b.question, "STATE", ["S3"], ["S3.E3"])
-    same_screen = cand(a.question.replace("Continue", "the button"), "ACTION", ["S2"], ["S2.E4"])
+    same_screen = cand(a.question.replace("Place order", "the button"), "ACTION", ["S3"], ["S3.E3"])
     unrelated = cand("Which items are shown in the cart list and in what order?", "ACTION", ["S1"], ["S1.E1"])
     out, merged = dedupe_across_screens([a, b, other_cat, unrelated], INV)
     assert merged == 1 and len(out) == 3
-    assert out[0].scope == "FLOW" and out[0].screens == ["S2", "S3"] and out[0].element_refs == ["S2.E4", "S3.E3"]
+    assert out[0].scope == "FLOW" and out[0].screens == ["S1", "S3"] and out[0].element_refs == ["S3.E3", "S1.E3"]
     assert out[0].priority == "P1" and out[0].source_agents == ["DS", "IA"]
     assert dedupe_across_screens([a, same_screen], INV)[1] == 0  # Jaccard merge is cross-screen only
     assert dedupe_across_screens([a, b], INV, threshold=0.95)[1] == 0
+    templated = cand(a.question.replace("Place order", "Continue"), "ACTION", ["S2"], ["S2.E4"])
+    assert dedupe_across_screens([a, templated], INV)[1] == 0  # same wording, different element: not merged
 
-
-# ------------------------------------------------------------------ T3.3 coverage, fallback, patch
 
 def test_coverage():
     assert coverage([], INV) == ["S1.E1", "S1.E2", "S1.E3", "S2.E1", "S2.E2", "S2.E3", "S2.E4", "S3.E3", "S4.E2",
@@ -315,3 +316,29 @@ def test_flow_index():
 def test_clean_question_drops_internal_ids(raw, clean):
     from src.postprocess import clean_question
     assert clean_question(raw) == clean
+
+
+def test_bare_ids_become_labels():
+    from src.postprocess import clean_question, FlowIndex
+    labels = FlowIndex(INV).labels
+    assert clean_question("Which API returns the list shown in S1.E1 and RC1", labels) == \
+        'Which API returns the list shown in "Cart items" and "Address block"?'
+    assert clean_question("What drives S9.E9 here", labels) == "What drives here?"
+    q = validate_candidate(raw(question="Which service validates S2.E2 input"), INV)
+    assert q.question == 'Which service validates "Full name" input?'
+
+
+def test_templated_questions_about_different_elements_are_not_merged():
+    a = cand("When is the Continue button enabled or disabled?", "STATE", ["S2"], ["S2.E4"])
+    b = cand("When is the Place order button enabled or disabled?", "STATE", ["S3"], ["S3.E3"])
+    out, merged = dedupe_across_screens([a, b], INV, threshold=0.4)
+    assert merged == 0 and len(out) == 2
+    same = cand("Where do the Deliver to address details come from?", "DATA_SOURCE", ["S2"], ["S2.E1"])
+    same2 = cand("Where do the Deliver to address details come from on this step?", "DATA_SOURCE", ["S3"], ["S3.E1"])
+    assert dedupe_across_screens([same, same2], INV)[1] == 1  # same subject on two screens still merges
+
+
+def test_screen_ids_become_names():
+    from src.postprocess import clean_question, FlowIndex
+    assert clean_question("Which API feeds the summary on screens S1, S3, and S4", FlowIndex(INV).labels) == \
+        'Which API feeds the summary on screens "Cart", "Place order", and "Success"?'

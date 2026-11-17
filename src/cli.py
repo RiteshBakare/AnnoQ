@@ -71,6 +71,14 @@ def run(argv: list[str] | None = None) -> int:
     rc = RunContext(settings=settings, flow=flow, jira_key=key, ticket_context=ticket_context, jira=jira)
     if context_warning:
         rc.warn(context_warning)
+    if jira and not settings.dry_run and not settings.force:  # idempotency pre-check: skip BEFORE spending LLM calls
+        try:
+            if jira.has_marker(key, rc.marker):
+                print(f"Skipped: {key} already has the questions for this exact flow ({rc.marker}). "
+                      "Use --force to post again. LLM calls: 0")
+                return EXIT_OK
+        except JiraError as e:  # publish re-checks and reports; the comment is still generated and saved
+            rc.warn(f"Jira marker pre-check failed: {e}")
 
     mode = "dry-run" if settings.dry_run else ("post, --force" if settings.force else "post")
     print(f"Flow '{flow.hint}': {rc.n_screens} screen(s) -> {key} ({mode}) · run {rc.run_id}")

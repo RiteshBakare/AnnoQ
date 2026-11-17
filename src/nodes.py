@@ -221,6 +221,7 @@ def build_nodes(rc: RunContext) -> SimpleNamespace:
         _write_json(out / "flow_inventory.json", inventory)
         _write_json(out / "candidates.json", candidates or [])
         _write_json(out / "curated.json", curated or [])
+        _write_json(out / "questions.json", questions)  # final numbered list, exactly as in the comment
         try:
             audit = json.loads(audit_raw) if audit_raw else {}
         except json.JSONDecodeError:

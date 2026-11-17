@@ -102,7 +102,7 @@ def test_normal_run_is_8_calls_2_gemini_6_groq(make_rc):
     assert all(images(r) == 0 for n, sc in scripts.items() if n not in ("screen_analyst", "auditor")
                for r in sc.requests)
     out = rc.out_dir
-    for f in ("comment.txt", "flow_inventory.json", "candidates.json", "curated.json", "audit.json",
+    for f in ("comment.txt", "flow_inventory.json", "candidates.json", "curated.json", "audit.json", "questions.json",
               "run_report.json"):
         assert (out / f).exists(), f
     report = json.loads((out / "run_report.json").read_text())
