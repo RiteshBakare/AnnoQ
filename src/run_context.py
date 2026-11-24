@@ -31,6 +31,7 @@ class RunContext:
     warnings: list[str] = field(default_factory=list)
     _open_calls: dict[str, tuple[str, float]] = field(default_factory=dict, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    _t0: float = field(default_factory=time.monotonic, repr=False)
 
     def __post_init__(self) -> None:
         self.budget = LLMBudget(self.settings.max_llm_calls)
@@ -53,6 +54,15 @@ class RunContext:
         with self._lock:
             if msg not in self.warnings:
                 self.warnings.append(msg)
+
+    def say(self, msg: str) -> None:
+        """Live progress line on stdout, prefixed with seconds since the run started. Display only, not stored."""
+        with self._lock:
+            print(f"[{time.monotonic() - self._t0:5.1f}s] {msg}", flush=True)
+
+    @property
+    def elapsed(self) -> float:
+        return time.monotonic() - self._t0
 
     # --- convenience ---
     @property

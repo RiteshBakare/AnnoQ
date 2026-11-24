@@ -623,7 +623,8 @@ The prompt files in `src/templates/` are now the source of truth for prompts; §
 
 **Console and logging.**
 - stdout/stderr are switched to UTF-8; the Windows cp1252 console crashed on `→ · —`.
-- Logging: third-party libraries at WARNING; `src.*` at `LOG_LEVEL` (`-v` = DEBUG). Each LLM call and each Groq 429 wait is logged at INFO.
+- Logging: third-party libraries at WARNING; `src.*` at `LOG_LEVEL` (`-v` = DEBUG). Each Groq 429 wait is logged at INFO; the per-call log line is DEBUG (the progress lines below already show each call).
+- Live progress on stdout (`RunContext.say`, prefixed with elapsed seconds): a header (flow, models, screens, ticket context, budget), one `▶ [n/5]` line per stage (analyst, panel, curator, auditor, finalize), one `→` line per LLM call and one `✓`/`✗` line per reply (seconds, tokens), a `✓` result line per step (inventory counts, candidates, curated, dedupe/coverage, audit, artifacts, Jira), `↻` for retry/fallback, then `Done in Ns` before the summary. Display only; nothing new is stored.
 - LiteLLM debug banners are turned off.
 
 **Comment template (T5.1).**

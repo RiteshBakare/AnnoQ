@@ -79,12 +79,15 @@ def make_callbacks(rc: RunContext, attach_images: bool) -> dict[str, Any]:
         agent = callback_context.agent_name
         if not rc.budget.consume(agent):
             rc.warn(f"LLM budget exhausted ({rc.budget.max} calls): call by {agent} refused")
+            rc.say(f"   ✗ {agent}: LLM budget exhausted ({rc.budget.max} calls), call refused")
             return stub_response({"error": "budget_exhausted"})
         if attach_images:
             llm_request.contents.append(types.Content(role="user", parts=list(rc.image_parts)))
         model = rc.agent_models.get(agent) or llm_request.model or "?"
         rc.start_call(agent, model)
-        log.info("LLM call #%d -> %s (%s)", rc.budget.used, agent, model)
+        log.debug("LLM call #%d -> %s (%s)", rc.budget.used, agent, model)
+        images = f" + {rc.n_screens} screen image(s)" if attach_images else ""
+        rc.say(f"   → LLM call {rc.budget.used}/{rc.budget.max}: {agent} ({model}{images})")
         return None
 
     def after_model_callback(callback_context, llm_response):
@@ -94,11 +97,15 @@ def make_callbacks(rc: RunContext, attach_images: bool) -> dict[str, Any]:
             return None
         model, t0 = started
         usage = llm_response.usage_metadata
-        rc.record(LlmCallLog(
+        entry = LlmCallLog(
             agent=callback_context.agent_name, model=model, seconds=round(time.monotonic() - t0, 2),
             prompt_tokens=getattr(usage, "prompt_token_count", None),
             output_tokens=getattr(usage, "candidates_token_count", None), ok=True,
-        ))
+        )
+        rc.record(entry)
+        tokens = (f" · {entry.prompt_tokens:,} in / {entry.output_tokens:,} out tokens"
+                  if entry.prompt_tokens is not None and entry.output_tokens is not None else "")
+        rc.say(f"   ✓ {entry.agent} replied in {entry.seconds:.1f}s{tokens}")
         return None
 
     def on_model_error_callback(callback_context, llm_request, error):
@@ -107,6 +114,7 @@ def make_callbacks(rc: RunContext, attach_images: bool) -> dict[str, Any]:
         model, t0 = started if started else (rc.agent_models.get(agent) or llm_request.model or "?", time.monotonic())
         rc.record(LlmCallLog(agent=agent, model=model, seconds=round(time.monotonic() - t0, 2), ok=False))
         rc.warn(f"{agent}: {friendly_error(error, model)}")
+        rc.say(f"   ✗ {agent} failed: {friendly_error(error, model)}")
         log.warning("%s model error: %s", agent, str(error)[:300])
         return stub_response({"error": "model_error", "detail": type(error).__name__})
 

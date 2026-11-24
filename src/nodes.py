@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 COMPLEXITY_TARGET = {"low": "2-3", "medium": "4-6", "high": "6-8"}
 MIN_USABLE_SPECIALISTS = 3
+STAGES = 5  # console progress: analyst, panel, curator, auditor, finalize/publish
 
 
 # =========================================================================== input builders (T2.2)
@@ -121,6 +122,12 @@ def build_nodes(rc: RunContext) -> SimpleNamespace:
         for m in messages:
             rc.warn(m)
 
+    def stage(n: int, title: str, detail: str) -> None:
+        rc.say(f"▶ [{n}/{STAGES}] {title} · {detail}")
+
+    def model_of(agent: str) -> str:
+        return rc.agent_models.get(agent, "?")
+
     def write_report(questions: list[dict], posted: bool, skipped: str | None) -> Path:
         report = RunReport(jira_key=rc.jira_key, flow_sha=rc.flow.sha, screens=rc.n_screens,
                            llm_calls=rc.budget.used, calls=rc.calls, question_count=len(questions),
@@ -132,27 +139,41 @@ def build_nodes(rc: RunContext) -> SimpleNamespace:
 
     # --- analyst ------------------------------------------------------------------------------
     def build_analyst_input(node_input, analyst_repair=""):
+        if analyst_repair:
+            rc.say("   ↻ Re-asking the screen analyst with a repair hint")
+        else:
+            stage(1, "Screen analyst", f"reading {rc.n_screens} screen(s) with {model_of('screen_analyst')}")
         return Event(output=analyst_input(rc.flow, rc.ticket_context, analyst_repair))
 
     def validate_inventory(node_input, retries_used=0):
         try:
             inv, warnings = pp.validate_inventory(node_input, rc.flow)
         except pp.InvalidOutput as e:
+            rc.say(f"   ✗ Analyst output invalid: {str(e)[:120]}")
             if retries_used < retry_pool:
                 rc.warn(f"analyst output invalid, retrying once: {e}")
                 return Event(state={"retries_used": retries_used + 1, "analyst_repair": str(e)}, route="RETRY")
             return Event(state={"fail_reason": f"analyst output invalid: {e}"}, route="ABORT")
         warn(warnings)
+        elements = [e for sc in inv.screens for e in sc.elements]
+        flagged = sum(e.needs_clarification for e in elements)
+        rc.say(f"   ✓ Inventory: {len(inv.screens)} screen(s) · {len(elements)} elements ({flagged} need "
+               f"clarification) · {len(inv.recurring_components)} recurring · {len(inv.transitions)} transition(s)")
         data = inv.model_dump()
         return Event(output=data, state={"inventory": data}, route="OK")
 
     # --- specialist panel ---------------------------------------------------------------------
     def build_panel_input(node_input):
+        tags = " ".join(SPECIALIST_TAGS.values())
+        stage(2, "Specialist panel", f"{len(SPECIALIST_TAGS)} lenses in parallel ({tags}) with "
+                                     f"{model_of(next(iter(SPECIALIST_TAGS)))}")
         return Event(output=panel_input(inv_of(node_input), rc.ticket_context))
 
     def merge_candidates(node_input, inventory=None):
         cands, usable, warnings = pp.merge_candidates(node_input or {}, inv_of(inventory), SPECIALIST_TAGS)
         warn(warnings)
+        mark = "✓" if usable >= MIN_USABLE_SPECIALISTS else "✗"
+        rc.say(f"   {mark} {len(cands)} candidate question(s) from {usable}/{len(SPECIALIST_TAGS)} specialists")
         if usable < MIN_USABLE_SPECIALISTS:
             return Event(state={"fail_reason": f"only {usable} of {len(SPECIALIST_TAGS)} specialists returned "
                                                f"usable output (need {MIN_USABLE_SPECIALISTS})"}, route="ABORT")
@@ -161,24 +182,32 @@ def build_nodes(rc: RunContext) -> SimpleNamespace:
 
     # --- curator ------------------------------------------------------------------------------
     def build_curator_input(node_input, inventory=None, candidates=None, curator_repair=""):
+        if curator_repair:
+            rc.say("   ↻ Re-asking the curator with a repair hint")
+        else:
+            stage(3, "Flow curator", f"merging {len(candidates or [])} candidates with {model_of('flow_curator')}")
         return Event(output=curator_input(inv_of(inventory), candidates or [], s, curator_repair))
 
     def validate_curated(node_input, inventory=None, candidates=None, retries_used=0):
         try:
             questions, warnings = pp.parse_curated(node_input, inv_of(inventory), len(candidates or []))
         except pp.InvalidOutput as e:
+            rc.say(f"   ✗ Curator output invalid: {str(e)[:120]}")
             if retries_used < retry_pool:
                 rc.warn(f"curator output invalid, retrying once: {e}")
                 return Event(state={"retries_used": retries_used + 1, "curator_repair": str(e)}, route="RETRY")
             rc.warn(f"curator output unusable ({e}); using the deterministic fallback")
+            rc.say("   ↻ Switching to the deterministic fallback curator (no LLM call)")
             return Event(output=candidates or [], route="FALLBACK")
         warn(warnings)
+        rc.say(f"   ✓ Curated {len(candidates or [])} candidates into {len(questions)} question(s)")
         data = dumps(questions)
         return Event(output=data, state={"curated": data, "curated_by": "curator"}, route="OK")
 
     def fallback_curate(node_input, inventory=None, candidates=None):
         questions, warnings = pp.fallback_curate([Candidate(**c) for c in candidates or []], inv_of(inventory), s)
         warn(warnings)
+        rc.say(f"   ✓ Fallback curated {len(candidates or [])} candidates into {len(questions)} question(s)")
         data = dumps(questions)
         return Event(output=data, state={"curated": data, "curated_by": "fallback"})
 
@@ -187,17 +216,23 @@ def build_nodes(rc: RunContext) -> SimpleNamespace:
         inv = inv_of(inventory)
         questions, merged = pp.dedupe_across_screens([Candidate(**q) for q in node_input or []], inv)
         if merged:
-            log.info("code dedupe merged %d cross-screen duplicate(s)", merged)
+            log.debug("code dedupe merged %d cross-screen duplicate(s)", merged)
+        uncovered = pp.coverage(questions, inv)
+        rc.say(f"   ✓ Cross-screen dedupe merged {merged} duplicate(s) · {len(uncovered)} flagged item(s) "
+               f"not covered yet")
         numbered = dumps(pp.order_and_number(questions, inv))
-        return Event(output=numbered, state={"audit_questions": numbered, "coverage": pp.coverage(questions, inv)})
+        return Event(output=numbered, state={"audit_questions": numbered, "coverage": uncovered})
 
     def build_audit_input(node_input, inventory=None, coverage=None):
+        stage(4, "Auditor", f"checking {len(node_input or [])} question(s) against the screens with "
+                            f"{model_of('auditor')}")
         return Event(output=auditor_input(node_input or [], inv_of(inventory), coverage or []))
 
     def apply_patch(node_input, inventory=None, audit_questions=None):
         questions = [Question(**q) for q in audit_questions or []]
         patched, warnings = pp.apply_patch(questions, node_input, inv_of(inventory))
         warn(warnings)
+        rc.say(f"   ✓ Audit applied · {len(questions)} → {len(patched)} question(s)")
         raw = node_input if isinstance(node_input, str) else json.dumps(node_input)
         return Event(output=dumps(patched), state={"audit_raw": raw})
 
@@ -214,6 +249,8 @@ def build_nodes(rc: RunContext) -> SimpleNamespace:
 
         final, comment, size_warnings = pp.fit_to_size(numbered, render, s.jira_comment_max_chars)
         warn(size_warnings)
+        common = sum(q.scope == "FLOW" for q in final)
+        stage(5, "Finalize", f"{len(final)} question(s) ({common} common) · comment {len(comment):,} chars")
         return Event(output=comment, state={"questions": dumps(final), "comment": comment})
 
     def publish(node_input, inventory=None, candidates=None, curated=None, audit_raw="", questions=None):
@@ -229,22 +266,29 @@ def build_nodes(rc: RunContext) -> SimpleNamespace:
             audit = {"raw": audit_raw}
         _write_json(out / "audit.json", audit)
 
+        rc.say(f"   ✓ Artifacts saved to {out}")
+
         posted, skipped, jira_error = False, None, None
         if s.dry_run:
             skipped = "dry-run"
+            rc.say(f"   ✓ Dry run: not posting to {rc.jira_key}")
         elif rc.jira is None:
             jira_error = "Jira is not configured (JIRA_BASE_URL / JIRA_EMAIL / JIRA_API_TOKEN)"
         else:
             try:
                 if not s.force and rc.jira.has_marker(rc.jira_key, rc.marker):
                     skipped = "marker already on the ticket (use --force to post again)"
+                    rc.say(f"   ✓ {rc.jira_key} already has this flow's questions; not posting again")
                 else:
+                    rc.say(f"   → Posting one comment to {rc.jira_key}")
                     rc.jira.post_comment(rc.jira_key, comment)  # exactly one POST, never retried
                     posted = True
+                    rc.say(f"   ✓ Posted to {rc.jira_key}")
             except JiraError as e:
                 jira_error = str(e)
         if jira_error:
             rc.warn(f"Jira: {jira_error}")
+            rc.say(f"   ✗ Jira: {jira_error}")
         report = write_report(questions, posted, skipped)
         return Event(state={"result": {"ok": True, "posted": posted, "skipped_reason": skipped,
                                        "jira_error": jira_error, "comment_path": str(out / "comment.txt"),

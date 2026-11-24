@@ -83,6 +83,10 @@ def run(argv: list[str] | None = None) -> int:
     mode = "dry-run" if settings.dry_run else ("post, --force" if settings.force else "post")
     print(f"Flow '{flow.hint}': {rc.n_screens} screen(s) -> {key} ({mode}) · run {rc.run_id}")
     print("Models: " + ", ".join(f"{k}={v}" for k, v in slots.items()))
+    print("Screens: " + ", ".join(f"{sc.id} {sc.file}" for sc in flow.screens))
+    print(f"Ticket context: {f'{len(ticket_context):,} chars from {key}' if ticket_context else 'none'} · "
+          f"LLM budget: {rc.budget.max} calls")
+    print("─" * 72, flush=True)
     try:
         state = asyncio.run(run_workflow(rc))
     except Exception as e:  # noqa: BLE001 - last-resort guard so the CLI always ends with a clear exit code
@@ -105,6 +109,8 @@ def run(argv: list[str] | None = None) -> int:
 
 def _print_summary(rc: RunContext, result: dict) -> None:
     gemini = sum(c.model.startswith("gemini") for c in rc.calls)
+    print("─" * 72)
+    print(f"{'Done' if result.get('ok') else 'Stopped'} in {rc.elapsed:.1f}s")
     print(f"LLM calls: {rc.budget.used} (Gemini {gemini}, Groq {len(rc.calls) - gemini})")
     if result.get("report_path"):
         with open(result["report_path"], encoding="utf-8") as f:
